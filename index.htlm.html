@@ -1,410 +1,1568 @@
 <!DOCTYPE html>
-<html lang="vi">
+<html lang="vi" class="h-full bg-slate-50">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Hệ Thống Quản Lý Vật Tư & Kỹ Thuật</title>
+    <title>ĐÔNG Á - Quản Lý Vật Tư Điện Lạnh & Điều Hành Kỹ Thuật</title>
     <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- FontAwesome Icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Chart.js CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- Google Fonts Inter -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                    },
+                    colors: {
+                        brand: {
+                            50: '#f0f9ff',
+                            100: '#e0f2fe',
+                            500: '#0284c7',
+                            600: '#0369a1',
+                            700: '#075985',
+                            800: '#0c4a6e',
+                            900: '#0a3651',
+                        },
+                        cool: {
+                            50: '#f4fbfd',
+                            500: '#06b6d4',
+                            600: '#0891b2',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
     <style>
-        .kanban-col { min-height: 500px; }
-        .active-tab { border-bottom: 3px solid #0284c7; color: #0284c7; font-weight: bold; }
+        /* Custom scrollbar for Kanban and tables */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #f1f5f9;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8;
+        }
+        .kanban-col {
+            min-height: calc(100vh - 280px);
+        }
     </style>
 </head>
-<body class="bg-slate-100 font-sans text-slate-800">
+<body class="h-full flex overflow-hidden font-sans text-slate-800 bg-slate-100">
 
-    <!-- Header Navigation -->
-    <header class="bg-slate-900 text-white sticky top-0 z-50 shadow-md">
-        <div class="max-w-7xl mx-auto px-4 py-3 flex justify-between items-center">
-            <div class="flex items-center space-x-3">
-                <i class="fa-solid font-bold text-2xl text-cyan-400 fa-snowflake"></i>
-                <span class="text-xl font-bold tracking-wide">ĐIỆN LẠNH ĐÔNG Á</span>
+    <!-- Toast Notification Container -->
+    <div id="toastContainer" class="fixed top-5 right-5 z-50 flex flex-col gap-2 pointer-events-none"></div>
+
+    <!-- MAIN SIDEBAR -->
+    <aside id="sidebar" class="w-64 bg-slate-900 text-slate-300 flex flex-col flex-shrink-0 transition-all duration-300 z-30 absolute md:relative inset-y-0 left-0 -translate-x-full md:translate-x-0 shadow-2xl md:shadow-none">
+        <!-- Logo Header -->
+        <div class="p-5 border-b border-slate-800 flex items-center justify-between">
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-sky-500 to-cyan-400 flex items-center justify-center text-white font-bold text-xl shadow-lg shadow-sky-500/30">
+                    <i class="fa-solid fa-snowflake animate-pulse"></i>
+                </div>
+                <div>
+                    <h1 class="font-bold text-white text-lg leading-tight">HVAC <span class="text-sky-400">PRO</span></h1>
+                    <p class="text-xs text-slate-400">Điện Lạnh & Kỹ Thuật</p>
+                </div>
             </div>
-            <div class="flex items-center space-x-4">
-                <span class="bg-cyan-600 text-xs px-2.5 py-1 rounded-full text-white font-medium">Quản Lý & Điều Xe</span>
-            </div>
+            <button onclick="toggleSidebar()" class="md:hidden text-slate-400 hover:text-white">
+                <i class="fa-solid fa-xmark text-xl"></i>
+            </button>
         </div>
-    </header>
 
-    <!-- Main Container -->
-    <div class="max-w-7xl mx-auto px-4 py-6">
+        <!-- Navigation Links -->
+        <nav class="flex-1 p-4 space-y-1.5 overflow-y-auto">
+            <div class="text-xs font-semibold text-slate-500 uppercase tracking-wider px-3 mb-2">Quản trị hệ thống</div>
+            
+            <button onclick="switchTab('dashboard')" id="nav-dashboard" class="nav-btn w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all text-white bg-sky-600/90 shadow-sm shadow-sky-600/50">
+                <i class="fa-solid fa-chart-pie w-5 text-center text-sky-200"></i>
+                <span>Tổng quan</span>
+            </button>
+
+            <button onclick="switchTab('inventory')" id="nav-inventory" class="nav-btn w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all text-slate-400 hover:bg-slate-800 hover:text-slate-200">
+                <i class="fa-solid fa-boxes-stacked w-5 text-center"></i>
+                <span>Vật tư & Bán hàng</span>
+                <span class="ml-auto bg-sky-500/20 text-sky-400 text-xs px-2 py-0.5 rounded-full font-semibold" id="productCountBadge">24</span>
+            </button>
+
+            <button onclick="switchTab('dispatch')" id="nav-dispatch" class="nav-btn w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all text-slate-400 hover:bg-slate-800 hover:text-slate-200">
+                <i class="fa-solid fa-list-check w-5 text-center"></i>
+                <span>Điều hành Kỹ thuật</span>
+                <span class="ml-auto bg-amber-500/20 text-amber-400 text-xs px-2 py-0.5 rounded-full font-semibold" id="pendingJobBadge">3</span>
+            </button>
+
+            <button onclick="switchTab('technicians')" id="nav-technicians" class="nav-btn w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all text-slate-400 hover:bg-slate-800 hover:text-slate-200">
+                <i class="fa-solid fa-user-gear w-5 text-center"></i>
+                <span>Đội ngũ Kỹ thuật viên</span>
+            </button>
+
+            <button onclick="switchTab('customers')" id="nav-customers" class="nav-btn w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all text-slate-400 hover:bg-slate-800 hover:text-slate-200">
+                <i class="fa-solid fa-users w-5 text-center"></i>
+                <span>Quản lý Khách hàng</span>
+            </button>
+
+            <div class="pt-4 border-t border-slate-800 my-2"></div>
+            <div class="text-xs font-semibold text-slate-500 uppercase tracking-wider px-3 mb-2">Báo cáo & Cài đặt</div>
+
+            <button onclick="showToast('Chức năng Báo cáo chuyên sâu đang hoàn thiện', 'info')" class="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-slate-400 hover:bg-slate-800 hover:text-slate-200">
+                <i class="fa-solid fa-chart-line w-5 text-center"></i>
+                <span>Báo cáo Doanh thu</span>
+            </button>
+
+            <button onclick="showToast('Cài đặt hệ thống', 'info')" class="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-slate-400 hover:bg-slate-800 hover:text-slate-200">
+                <i class="fa-solid fa-gear w-5 text-center"></i>
+                <span>Cài đặt hệ thống</span>
+            </button>
+        </nav>
+
+        <!-- User Info Footer -->
+        <div class="p-4 border-t border-slate-800 bg-slate-950/50 flex items-center gap-3">
+            <img src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&auto=format&fit=crop&q=80" alt="Avatar" class="w-9 h-9 rounded-full object-cover border border-slate-700">
+            <div class="flex-1 min-w-0">
+                <div class="text-sm font-semibold text-white truncate">Nguyễn Văn Quản Lý</div>
+                <div class="text-xs text-sky-400 truncate">Điều hành Tổng</div>
+            </div>
+            <button class="text-slate-400 hover:text-rose-400 transition" title="Đăng xuất" onclick="showToast('Đã đăng xuất an toàn', 'success')">
+                <i class="fa-solid fa-right-from-bracket"></i>
+            </button>
+        </div>
+    </aside>
+
+    <!-- MAIN CONTENT WRAPPER -->
+    <div class="flex-1 flex flex-col min-w-0 overflow-hidden">
         
-        <!-- Navigation Tabs -->
-        <div class="flex border-b border-slate-300 mb-6 bg-white rounded-t-lg shadow-sm px-4 overflow-x-auto">
-            <button onclick="switchTab('kanban')" id="tab-kanban" class="py-3 px-6 active-tab flex items-center gap-2 whitespace-nowrap">
-                <i class="fa-solid fa-list-check"></i> Điều Xe & Giao Việc
-            </button>
-            <button onclick="switchTab('techs')" id="tab-techs" class="py-3 px-6 text-slate-600 hover:text-cyan-600 flex items-center gap-2 whitespace-nowrap">
-                <i class="fa-solid fa-users-gear"></i> Quản Lý Kỹ Thuật Viên
-            </button>
-            <button onclick="switchTab('inventory')" id="tab-inventory" class="py-3 px-6 text-slate-600 hover:text-cyan-600 flex items-center gap-2 whitespace-nowrap">
-                <i class="fa-solid fa-boxes-stacked"></i> Kho Vật Tư
-            </button>
-        </div>
-
-        <!-- TAB 1: BẢNG GIAO VIỆC (KANBAN) -->
-        <div id="view-kanban" class="tab-content">
-            <div class="flex justify-between items-center mb-4">
-                <h2 class="text-xl font-bold text-slate-800"><i class="fa-solid fa-clipboard-list text-cyan-600 mr-2"></i> Bảng Công Việc Hiện Trường</h2>
-                <button onclick="openNewTaskModal()" class="bg-cyan-600 hover:bg-cyan-700 text-white font-semibold px-4 py-2 rounded-lg shadow flex items-center gap-2">
-                    <i class="fa-solid fa-plus"></i> + Tạo & Giao Việc Mới
+        <!-- HEADER TOPBAR -->
+        <header class="bg-white border-b border-slate-200 h-16 flex items-center justify-between px-4 sm:px-6 z-20 flex-shrink-0 shadow-sm">
+            <div class="flex items-center gap-3">
+                <button onclick="toggleSidebar()" class="md:hidden text-slate-600 hover:text-slate-900 p-2 rounded-lg hover:bg-slate-100">
+                    <i class="fa-solid fa-bars text-lg"></i>
                 </button>
-            </div>
-
-            <!-- Kanban Columns -->
-            <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
-                <!-- Chờ tiếp nhận -->
-                <div class="bg-slate-200/70 p-4 rounded-xl border border-slate-300 kanban-col">
-                    <h3 class="font-bold text-slate-700 mb-3 flex items-center justify-between">
-                        <span><i class="fa-regular fa-clock text-amber-500 mr-1"></i> CHỜ TIẾP NHẬN</span>
-                        <span id="count-pending" class="bg-amber-500 text-white text-xs px-2 py-0.5 rounded-full">0</span>
-                    </h3>
-                    <div id="col-pending" class="space-y-3"></div>
-                </div>
-
-                <!-- Đang di chuyển -->
-                <div class="bg-slate-200/70 p-4 rounded-xl border border-slate-300 kanban-col">
-                    <h3 class="font-bold text-slate-700 mb-3 flex items-center justify-between">
-                        <span><i class="fa-solid fa-truck-fast text-blue-500 mr-1"></i> ĐANG DI CHUYỂN</span>
-                        <span id="count-transit" class="bg-blue-500 text-white text-xs px-2 py-0.5 rounded-full">0</span>
-                    </h3>
-                    <div id="col-transit" class="space-y-3"></div>
-                </div>
-
-                <!-- Đang sửa chữa -->
-                <div class="bg-slate-200/70 p-4 rounded-xl border border-slate-300 kanban-col">
-                    <h3 class="font-bold text-slate-700 mb-3 flex items-center justify-between">
-                        <span><i class="fa-solid fa-wrench text-indigo-500 mr-1"></i> ĐANG THỰC HIỆN</span>
-                        <span id="count-progress" class="bg-indigo-500 text-white text-xs px-2 py-0.5 rounded-full">0</span>
-                    </h3>
-                    <div id="col-progress" class="space-y-3"></div>
-                </div>
-
-                <!-- Hoàn thành -->
-                <div class="bg-slate-200/70 p-4 rounded-xl border border-slate-300 kanban-col">
-                    <h3 class="font-bold text-slate-700 mb-3 flex items-center justify-between">
-                        <span><i class="fa-solid fa-circle-check text-emerald-500 mr-1"></i> HOÀN THÀNH</span>
-                        <span id="count-done" class="bg-emerald-500 text-white text-xs px-2 py-0.5 rounded-full">0</span>
-                    </h3>
-                    <div id="col-done" class="space-y-3"></div>
+                <div class="relative hidden sm:block w-72">
+                    <i class="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm"></i>
+                    <input type="text" placeholder="Tìm kiếm nhanh mã đơn, KH, thiết bị..." class="w-full pl-9 pr-4 py-1.5 bg-slate-100 border border-transparent rounded-lg text-sm focus:outline-none focus:bg-white focus:border-sky-500 transition">
                 </div>
             </div>
-        </div>
 
-        <!-- TAB 2: QUẢN LÝ DANH SÁCH KĨ THUẬT VIÊN (THÊM - SỬA - XÓA) -->
-        <div id="view-techs" class="tab-content hidden">
-            <div class="bg-white p-6 rounded-xl shadow border border-slate-200">
-                <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
+            <div class="flex items-center gap-3">
+                <!-- Quick Create Actions -->
+                <button onclick="openModal('createOrderModal')" class="hidden sm:flex items-center gap-2 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold px-3 py-2 rounded-lg transition border border-slate-200">
+                    <i class="fa-solid fa-cart-plus text-sky-600"></i>
+                    <span>Tạo Đơn Vật Tư</span>
+                </button>
+                <button onclick="openModal('createJobModal')" class="flex items-center gap-2 bg-sky-600 hover:bg-sky-700 text-white text-xs font-semibold px-3.5 py-2 rounded-lg shadow-sm transition shadow-sky-600/20">
+                    <i class="fa-solid fa-plus"></i>
+                    <span>Giao Việc Mới</span>
+                </button>
+
+                <!-- Notifications -->
+                <div class="relative">
+                    <button onclick="toggleNotificationMenu()" class="p-2 text-slate-500 hover:text-slate-700 hover:bg-slate-100 rounded-lg relative">
+                        <i class="fa-regular fa-bell text-lg"></i>
+                        <span class="absolute top-1.5 right-1.5 w-2 h-2 bg-rose-500 rounded-full ring-2 ring-white"></span>
+                    </button>
+                </div>
+            </div>
+        </header>
+
+        <!-- TAB CONTENT AREA -->
+        <main class="flex-1 overflow-y-auto p-4 sm:p-6 bg-slate-100">
+            
+            <!-- 1. DASHBOARD TAB -->
+            <div id="tab-dashboard" class="tab-content space-y-6">
+                <!-- Top Welcome & Date -->
+                <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
                     <div>
-                        <h2 class="text-xl font-bold text-slate-800">Quản Lý Đội Ngũ Kỹ Thuật Viên</h2>
-                        <p class="text-sm text-slate-500">Thêm mới, sửa thông tin hoặc xóa kỹ thuật viên khỏi hệ thống</p>
+                        <h2 class="text-2xl font-bold text-slate-800 tracking-tight">Tổng Quan Sổ Sách & Điều Hành</h2>
+                        <p class="text-sm text-slate-500">Thống kê hoạt động kinh doanh vật tư điện lạnh và đội ngũ kỹ thuật hôm nay.</p>
                     </div>
-                    <!-- NÚT THÊM KĨ THUẬT VIÊN -->
-                    <button onclick="openAddTechModal()" class="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold px-4 py-2 rounded-lg shadow flex items-center gap-2">
-                        <i class="fa-solid fa-user-plus"></i> + Thêm Kỹ Thuật Viên Mới
+                    <div class="flex items-center gap-2 bg-white px-3 py-1.5 rounded-lg border border-slate-200 text-xs font-medium text-slate-600 self-start sm:self-auto shadow-sm">
+                        <i class="fa-regular fa-calendar-check text-sky-600"></i>
+                        <span id="currentDateStr">Thứ Ba, 20/10/2026</span>
+                    </div>
+                </div>
+
+                <!-- KPI Metric Cards -->
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                    <!-- Revenue KPI -->
+                    <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm relative overflow-hidden group hover:border-sky-300 transition">
+                        <div class="flex justify-between items-start">
+                            <div>
+                                <p class="text-xs font-medium text-slate-500 uppercase tracking-wider">Doanh Thu Tháng</p>
+                                <h3 class="text-2xl font-bold text-slate-900 mt-1">184,500,000 <span class="text-xs font-normal text-slate-500">đ</span></h3>
+                            </div>
+                            <div class="w-10 h-10 rounded-lg bg-sky-50 text-sky-600 flex items-center justify-center text-lg">
+                                <i class="fa-solid fa-sack-dollar"></i>
+                            </div>
+                        </div>
+                        <div class="mt-4 flex items-center text-xs text-emerald-600 font-medium gap-1">
+                            <i class="fa-solid fa-arrow-trend-up"></i>
+                            <span>+14.2%</span>
+                            <span class="text-slate-400 font-normal ml-1">so với tháng trước</span>
+                        </div>
+                        <div class="absolute bottom-0 left-0 right-0 h-1 bg-sky-500"></div>
+                    </div>
+
+                    <!-- Orders KPI -->
+                    <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm relative overflow-hidden group hover:border-indigo-300 transition">
+                        <div class="flex justify-between items-start">
+                            <div>
+                                <p class="text-xs font-medium text-slate-500 uppercase tracking-wider">Đơn Hàng Vật Tư</p>
+                                <h3 class="text-2xl font-bold text-slate-900 mt-1">128 <span class="text-xs font-normal text-slate-500">đơn</span></h3>
+                            </div>
+                            <div class="w-10 h-10 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center text-lg">
+                                <i class="fa-solid fa-cart-shopping"></i>
+                            </div>
+                        </div>
+                        <div class="mt-4 flex items-center text-xs text-emerald-600 font-medium gap-1">
+                            <i class="fa-solid fa-arrow-trend-up"></i>
+                            <span>+8.5%</span>
+                            <span class="text-slate-400 font-normal ml-1">đã hoàn thành</span>
+                        </div>
+                        <div class="absolute bottom-0 left-0 right-0 h-1 bg-indigo-500"></div>
+                    </div>
+
+                    <!-- Tech Appointments KPI -->
+                    <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm relative overflow-hidden group hover:border-amber-300 transition">
+                        <div class="flex justify-between items-start">
+                            <div>
+                                <p class="text-xs font-medium text-slate-500 uppercase tracking-wider">Lịch Hẹn Kỹ Thuật</p>
+                                <h3 class="text-2xl font-bold text-slate-900 mt-1">18 <span class="text-xs font-normal text-slate-500">ca hôm nay</span></h3>
+                            </div>
+                            <div class="w-10 h-10 rounded-lg bg-amber-50 text-amber-600 flex items-center justify-center text-lg">
+                                <i class="fa-solid fa-screwdriver-wrench"></i>
+                            </div>
+                        </div>
+                        <div class="mt-4 flex items-center text-xs text-amber-600 font-medium gap-1">
+                            <i class="fa-solid fa-clock"></i>
+                            <span>3 ca gấp</span>
+                            <span class="text-slate-400 font-normal ml-1">cần xử lý ngay</span>
+                        </div>
+                        <div class="absolute bottom-0 left-0 right-0 h-1 bg-amber-500"></div>
+                    </div>
+
+                    <!-- Tech Staff Online -->
+                    <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm relative overflow-hidden group hover:border-emerald-300 transition">
+                        <div class="flex justify-between items-start">
+                            <div>
+                                <p class="text-xs font-medium text-slate-500 uppercase tracking-wider">Kỹ Thuật Viên Online</p>
+                                <h3 class="text-2xl font-bold text-slate-900 mt-1">8 / 10 <span class="text-xs font-normal text-slate-500">thợ</span></h3>
+                            </div>
+                            <div class="w-10 h-10 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center text-lg">
+                                <i class="fa-solid fa-user-check"></i>
+                            </div>
+                        </div>
+                        <div class="mt-4 flex items-center text-xs text-emerald-600 font-medium gap-1">
+                            <span class="w-2 h-2 rounded-full bg-emerald-500 animate-ping"></span>
+                            <span>6 thợ đang thi công</span>
+                        </div>
+                        <div class="absolute bottom-0 left-0 right-0 h-1 bg-emerald-500"></div>
+                    </div>
+                </div>
+
+                <!-- Charts Section -->
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                    <!-- Revenue Chart (2 Cols) -->
+                    <div class="lg:col-span-2 bg-white p-5 rounded-xl border border-slate-200 shadow-sm">
+                        <div class="flex items-center justify-between mb-4">
+                            <div>
+                                <h3 class="font-bold text-slate-800">Biểu Đồ Doanh Thu Bán Vật Tư & Dịch Vụ Sửa Chữa</h3>
+                                <p class="text-xs text-slate-500">So sánh doanh thu bán buôn linh kiện và doanh thu công thợ</p>
+                            </div>
+                            <select class="text-xs border border-slate-200 rounded-lg px-2.5 py-1.5 bg-slate-50 font-medium focus:outline-none">
+                                <option>7 ngày qua</option>
+                                <option selected>Tháng này</option>
+                                <option>Quý này</option>
+                            </select>
+                        </div>
+                        <div class="h-64 relative">
+                            <canvas id="revenueChart"></canvas>
+                        </div>
+                    </div>
+
+                    <!-- Service Distribution Chart (1 Col) -->
+                    <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm flex flex-col justify-between">
+                        <div>
+                            <h3 class="font-bold text-slate-800">Tỷ Lệ Dịch Vụ Kỹ Thuật</h3>
+                            <p class="text-xs text-slate-500 mb-4">Phân loại công việc kỹ thuật viên xử lý</p>
+                            <div class="h-52 relative flex items-center justify-center">
+                                <canvas id="servicePieChart"></canvas>
+                            </div>
+                        </div>
+                        <div class="mt-4 pt-3 border-t border-slate-100 grid grid-cols-2 gap-2 text-xs">
+                            <div class="flex items-center gap-1.5">
+                                <span class="w-3 h-3 rounded-full bg-sky-500 inline-block"></span>
+                                <span class="text-slate-600">Lắp đặt mới (40%)</span>
+                            </div>
+                            <div class="flex items-center gap-1.5">
+                                <span class="w-3 h-3 rounded-full bg-amber-500 inline-block"></span>
+                                <span class="text-slate-600">Vệ sinh/Bảo dưỡng (30%)</span>
+                            </div>
+                            <div class="flex items-center gap-1.5">
+                                <span class="w-3 h-3 rounded-full bg-rose-500 inline-block"></span>
+                                <span class="text-slate-600">Sửa sự cố/Gas (20%)</span>
+                            </div>
+                            <div class="flex items-center gap-1.5">
+                                <span class="w-3 h-3 rounded-full bg-indigo-500 inline-block"></span>
+                                <span class="text-slate-600">Thay Block/Bo (10%)</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Urgent Tasks & Recent Orders Dual Table -->
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    <!-- Urgent Tech Dispatch -->
+                    <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+                        <div class="p-4 bg-slate-50 border-b border-slate-200 flex items-center justify-between">
+                            <div class="flex items-center gap-2">
+                                <i class="fa-solid fa-triangle-exclamation text-amber-500"></i>
+                                <h3 class="font-bold text-slate-800 text-sm">Công Việc Kỹ Thuật Cần Xử Lý Gấp</h3>
+                            </div>
+                            <button onclick="switchTab('dispatch')" class="text-xs font-semibold text-sky-600 hover:text-sky-700">Xem tất cả &rarr;</button>
+                        </div>
+                        <div class="divide-y divide-slate-100" id="dashUrgentJobsList">
+                            <!-- Populated dynamically via JS -->
+                        </div>
+                    </div>
+
+                    <!-- Low Stock Alerts -->
+                    <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+                        <div class="p-4 bg-slate-50 border-b border-slate-200 flex items-center justify-between">
+                            <div class="flex items-center gap-2">
+                                <i class="fa-solid fa-boxes-packing text-rose-500"></i>
+                                <h3 class="font-bold text-slate-800 text-sm">Cảnh Báo Vật Tư Sắp Hết Kho</h3>
+                            </div>
+                            <button onclick="switchTab('inventory')" class="text-xs font-semibold text-sky-600 hover:text-sky-700">Quản lý kho &rarr;</button>
+                        </div>
+                        <div class="divide-y divide-slate-100" id="dashLowStockList">
+                            <!-- Populated dynamically via JS -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 2. INVENTORY & SALES TAB -->
+            <div id="tab-inventory" class="tab-content space-y-6 hidden">
+                <!-- Header Actions -->
+                <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                    <div>
+                        <h2 class="text-2xl font-bold text-slate-800 tracking-tight">Kho Vật Tư & Linh Kiện Điện Lạnh</h2>
+                        <p class="text-sm text-slate-500">Quản lý nhập xuất kho, giá bán buôn/lẻ và đặt hàng vật tư.</p>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <button onclick="openModal('addProductModal')" class="bg-slate-800 hover:bg-slate-900 text-white text-xs font-semibold px-3.5 py-2 rounded-lg shadow-sm transition">
+                            <i class="fa-solid fa-box-archive mr-1.5"></i> Thêm Linh Kiện Mới
+                        </button>
+                        <button onclick="openModal('createOrderModal')" class="bg-sky-600 hover:bg-sky-700 text-white text-xs font-semibold px-3.5 py-2 rounded-lg shadow-sm transition shadow-sky-600/20">
+                            <i class="fa-solid fa-cart-shopping mr-1.5"></i> Lập Đơn Bán Hàng
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Filters & Search Bar -->
+                <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex flex-col md:flex-row items-center gap-3 justify-between">
+                    <div class="relative w-full md:w-80">
+                        <i class="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm"></i>
+                        <input type="text" id="inventorySearch" onkeyup="filterInventory()" placeholder="Tìm tên linh kiện, mã SP..." class="w-full pl-9 pr-4 py-2 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-sky-500 focus:outline-none">
+                    </div>
+
+                    <div class="flex items-center gap-2 w-full md:w-auto overflow-x-auto pb-1 md:pb-0">
+                        <!-- Category Filter -->
+                        <select id="categoryFilter" onchange="filterInventory()" class="text-xs border border-slate-200 rounded-lg px-3 py-2 bg-slate-50 font-medium focus:outline-none">
+                            <option value="all">Tất cả danh mục</option>
+                            <option value="Gas Lạnh">Gas Lạnh (R32, R410A...)</option>
+                            <option value="Ống Đồng">Ống Đồng & Bảo Ôn</option>
+                            <option value="Máy Nén (Compressor)">Máy Nén / Block</option>
+                            <option value="Bo Mạch">Bo Mạch Điều Khuển</option>
+                            <option value="Tụ Điện & Phụ Kiện">Tụ Điện & Phụ Kiện</option>
+                            <option value="Dụng Cụ Vệ Sinh">Dụng Cụ Vệ Sinh/Bảo Dưỡng</option>
+                        </select>
+
+                        <!-- Brand Filter -->
+                        <select id="brandFilter" onchange="filterInventory()" class="text-xs border border-slate-200 rounded-lg px-3 py-2 bg-slate-50 font-medium focus:outline-none">
+                            <option value="all">Tất cả hãng</option>
+                            <option value="Daikin">Daikin</option>
+                            <option value="Panasonic">Panasonic</option>
+                            <option value="LG">LG</option>
+                            <option value="Mitsubishi">Mitsubishi</option>
+                            <option value="Chemours">Chemours Dupont</option>
+                            <option value="Luvata">Luvata/Toàn Phát</option>
+                        </select>
+
+                        <!-- Stock Status Filter -->
+                        <select id="stockFilter" onchange="filterInventory()" class="text-xs border border-slate-200 rounded-lg px-3 py-2 bg-slate-50 font-medium focus:outline-none">
+                            <option value="all">Tình trạng kho</option>
+                            <option value="in_stock">Còn hàng</option>
+                            <option value="low_stock">Sắp hết hàng (&lt; 10)</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Product Grid -->
+                <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5" id="productGrid">
+                    <!-- Products will be injected by JavaScript -->
+                </div>
+            </div>
+
+            <!-- 3. FIELD SERVICE DISPATCH TAB (KANBAN) -->
+            <div id="tab-dispatch" class="tab-content space-y-6 hidden">
+                <!-- Header -->
+                <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                    <div>
+                        <h2 class="text-2xl font-bold text-slate-800 tracking-tight">Điều Hành & Phân Công Kỹ Thuật Viên</h2>
+                        <p class="text-sm text-slate-500">Quy trình xử lý phiếu bảo trì, lắp đặt, sửa chữa điện lạnh theo thời gian thực.</p>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <button onclick="openModal('createJobModal')" class="bg-sky-600 hover:bg-sky-700 text-white text-xs font-semibold px-4 py-2 rounded-lg shadow-sm transition shadow-sky-600/20 flex items-center gap-1.5">
+                            <i class="fa-solid fa-plus-circle"></i>
+                            <span>Tạo Phiếu Giao Việc</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Kanban Board Pipeline -->
+                <div class="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-4 overflow-x-auto pb-4">
+                    
+                    <!-- Col 1: Pending Assignment -->
+                    <div class="bg-slate-200/70 p-3 rounded-xl flex flex-col kanban-col min-w-[260px]">
+                        <div class="flex items-center justify-between font-bold text-slate-700 text-sm mb-3 px-1">
+                            <div class="flex items-center gap-2">
+                                <span class="w-3 h-3 rounded-full bg-slate-500"></span>
+                                <span>Chờ Phân Công</span>
+                            </div>
+                            <span class="bg-slate-300 text-slate-700 text-xs px-2 py-0.5 rounded-full" id="count-pending">0</span>
+                        </div>
+                        <div class="space-y-3 flex-1 overflow-y-auto pr-1" id="col-pending" ondragover="allowDrop(event)" ondrop="drop(event, 'pending')">
+                            <!-- Cards inserted JS -->
+                        </div>
+                    </div>
+
+                    <!-- Col 2: Dispatched / Moving -->
+                    <div class="bg-slate-200/70 p-3 rounded-xl flex flex-col kanban-col min-w-[260px]">
+                        <div class="flex items-center justify-between font-bold text-slate-700 text-sm mb-3 px-1">
+                            <div class="flex items-center gap-2">
+                                <span class="w-3 h-3 rounded-full bg-amber-500"></span>
+                                <span>Đang Di Chuyển</span>
+                            </div>
+                            <span class="bg-amber-200 text-amber-800 text-xs px-2 py-0.5 rounded-full" id="count-moving">0</span>
+                        </div>
+                        <div class="space-y-3 flex-1 overflow-y-auto pr-1" id="col-moving" ondragover="allowDrop(event)" ondrop="drop(event, 'moving')">
+                            <!-- Cards inserted JS -->
+                        </div>
+                    </div>
+
+                    <!-- Col 3: In Progress -->
+                    <div class="bg-slate-200/70 p-3 rounded-xl flex flex-col kanban-col min-w-[260px]">
+                        <div class="flex items-center justify-between font-bold text-slate-700 text-sm mb-3 px-1">
+                            <div class="flex items-center gap-2">
+                                <span class="w-3 h-3 rounded-full bg-sky-500"></span>
+                                <span>Đang Sửa/Lắp Đặt</span>
+                            </div>
+                            <span class="bg-sky-200 text-sky-800 text-xs px-2 py-0.5 rounded-full" id="count-inprogress">0</span>
+                        </div>
+                        <div class="space-y-3 flex-1 overflow-y-auto pr-1" id="col-inprogress" ondragover="allowDrop(event)" ondrop="drop(event, 'inprogress')">
+                            <!-- Cards inserted JS -->
+                        </div>
+                    </div>
+
+                    <!-- Col 4: Completed -->
+                    <div class="bg-slate-200/70 p-3 rounded-xl flex flex-col kanban-col min-w-[260px]">
+                        <div class="flex items-center justify-between font-bold text-slate-700 text-sm mb-3 px-1">
+                            <div class="flex items-center gap-2">
+                                <span class="w-3 h-3 rounded-full bg-indigo-500"></span>
+                                <span>Chờ Nghiệm Thu</span>
+                            </div>
+                            <span class="bg-indigo-200 text-indigo-800 text-xs px-2 py-0.5 rounded-full" id="count-testing">0</span>
+                        </div>
+                        <div class="space-y-3 flex-1 overflow-y-auto pr-1" id="col-testing" ondragover="allowDrop(event)" ondrop="drop(event, 'testing')">
+                            <!-- Cards inserted JS -->
+                        </div>
+                    </div>
+
+                    <!-- Col 5: Done -->
+                    <div class="bg-slate-200/70 p-3 rounded-xl flex flex-col kanban-col min-w-[260px]">
+                        <div class="flex items-center justify-between font-bold text-slate-700 text-sm mb-3 px-1">
+                            <div class="flex items-center gap-2">
+                                <span class="w-3 h-3 rounded-full bg-emerald-500"></span>
+                                <span>Hoàn Thành</span>
+                            </div>
+                            <span class="bg-emerald-200 text-emerald-800 text-xs px-2 py-0.5 rounded-full" id="count-done">0</span>
+                        </div>
+                        <div class="space-y-3 flex-1 overflow-y-auto pr-1" id="col-done" ondragover="allowDrop(event)" ondrop="drop(event, 'done')">
+                            <!-- Cards inserted JS -->
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+
+            <!-- 4. TECHNICIANS MANAGEMENT TAB -->
+            <div id="tab-technicians" class="tab-content space-y-6 hidden">
+                <!-- Header -->
+                <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                    <div>
+                        <h2 class="text-2xl font-bold text-slate-800 tracking-tight">Đội Ngũ Kỹ Thuật Viên</h2>
+                        <p class="text-sm text-slate-500">Danh sách nhân sự, trạng thái ca làm việc và đánh giá tay nghề.</p>
+                    </div>
+                    <button onclick="openModal('addTechModal')" class="bg-sky-600 hover:bg-sky-700 text-white text-xs font-semibold px-3.5 py-2 rounded-lg shadow-sm transition shadow-sky-600/20 flex items-center gap-1.5 self-start sm:self-auto">
+                        <i class="fa-solid fa-user-plus"></i>
+                        <span>Thêm Kỹ Thuật Viên</span>
                     </button>
                 </div>
 
-                <!-- Bảng danh sách kỹ thuật viên -->
-                <div class="overflow-x-auto">
-                    <table class="w-full text-left border-collapse">
-                        <thead>
-                            <tr class="bg-slate-100 border-b border-slate-200 text-slate-600 text-sm">
-                                <th class="p-3">Họ và Tên</th>
-                                <th class="p-3">Số Điện Thoại</th>
-                                <th class="p-3">Khu Vực Phụ Trách</th>
-                                <th class="p-3">Trạng Thái</th>
-                                <th class="p-3 text-center">Thao Tác</th>
+                <!-- Tech List Cards -->
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5" id="techGrid">
+                    <!-- Tech cards dynamically populated -->
+                </div>
+            </div>
+
+            <!-- 5. CUSTOMERS & HISTORY TAB -->
+            <div id="tab-customers" class="tab-content space-y-6 hidden">
+                <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                    <div>
+                        <h2 class="text-2xl font-bold text-slate-800 tracking-tight">Danh Sách Khách Hàng & Thiết Bị</h2>
+                        <p class="text-sm text-slate-500">Lịch sử lắp đặt, sửa chữa và chu kỳ vệ sinh định kỳ máy lạnh tại nhà khách.</p>
+                    </div>
+                    <button onclick="openModal('addCustomerModal')" class="bg-sky-600 hover:bg-sky-700 text-white text-xs font-semibold px-3.5 py-2 rounded-lg shadow-sm transition shadow-sky-600/20 flex items-center gap-1.5 self-start sm:self-auto">
+                        <i class="fa-solid fa-plus"></i>
+                        <span>Thêm Khách Hàng</span>
+                    </button>
+                </div>
+
+                <!-- Customer Table -->
+                <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+                    <div class="p-4 border-b border-slate-200 flex items-center justify-between bg-slate-50">
+                        <input type="text" id="custSearch" onkeyup="filterCustomers()" placeholder="Tìm theo tên KH, SĐT, Địa chỉ..." class="px-3 py-1.5 border border-slate-200 rounded-lg text-sm w-72 focus:outline-none focus:ring-2 focus:ring-sky-500">
+                        <div class="text-xs text-slate-500">Hiển thị <span id="custCount" class="font-bold text-slate-800">0</span> khách hàng</div>
+                    </div>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left text-sm text-slate-600">
+                            <thead class="bg-slate-100 text-xs uppercase font-semibold text-slate-500 border-b border-slate-200">
+                                <tr>
+                                    <th class="p-3.5 pl-5">Tên Khách Hàng</th>
+                                    <th class="p-3.5">Số Điện Thoại</th>
+                                    <th class="p-3.5">Địa Chỉ</th>
+                                    <th class="p-3.5">Thiết Bị Điện Lạnh Đang Dùng</th>
+                                    <th class="p-3.5">Lần Dịch Vụ Gần Nhất</th>
+                                    <th class="p-3.5 pr-5 text-right">Thao Tác</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-slate-100" id="customerTableBody">
+                                <!-- Populated dynamically -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+        </main>
+    </div>
+
+    <!-- ==================== MODALS SECTION ==================== -->
+
+    <!-- Modal 1: Create Job / Ticket -->
+    <div id="createJobModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center hidden p-4">
+        <div class="bg-white rounded-2xl max-w-lg w-full shadow-2xl overflow-hidden border border-slate-100 animate-in fade-in zoom-in duration-200">
+            <div class="p-5 bg-gradient-to-r from-sky-700 to-sky-600 text-white flex justify-between items-center">
+                <div class="flex items-center gap-2">
+                    <i class="fa-solid fa-file-circle-plus text-xl text-sky-200"></i>
+                    <h3 class="font-bold text-lg">Tạo Phiếu Giao Việc Kỹ Thuật</h3>
+                </div>
+                <button onclick="closeModal('createJobModal')" class="text-sky-200 hover:text-white text-lg"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <form id="jobForm" onsubmit="handleCreateJob(event)" class="p-5 space-y-4 max-h-[80vh] overflow-y-auto">
+                <div>
+                    <label class="block text-xs font-semibold text-slate-700 uppercase mb-1">Tên Khách Hàng & SĐT (*)</label>
+                    <div class="grid grid-cols-2 gap-2">
+                        <input type="text" required id="jobCustomer" placeholder="Nguyễn Văn X" class="w-full px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-sky-500 outline-none">
+                        <input type="text" required id="jobPhone" placeholder="0908123456" class="w-full px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-sky-500 outline-none">
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-semibold text-slate-700 uppercase mb-1">Địa Chỉ Sửa Chữa / Lắp Đặt (*)</label>
+                    <input type="text" required id="jobAddress" placeholder="Số 123 Đường ABC, Quận 1, TP.HCM" class="w-full px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-sky-500 outline-none">
+                </div>
+
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-700 uppercase mb-1">Loại Công Việc (*)</label>
+                        <select id="jobType" class="w-full px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-sky-500 outline-none bg-white">
+                            <option value="Sửa chữa sự cố">Sửa chữa sự cố / Báo lỗi</option>
+                            <option value="Vệ sinh & Bảo dưỡng">Vệ sinh & Bảo dưỡng máy</option>
+                            <option value="Lắp đặt mới">Lắp đặt máy lạnh mới</option>
+                            <option value="Nạp Gas & Kiểm tra">Nạp Gas R32/R410A</option>
+                            <option value="Thay thế linh kiện">Thay Block / Bo mạch</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-700 uppercase mb-1">Mức Độ Ưu Tiên</label>
+                        <select id="jobPriority" class="w-full px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-sky-500 outline-none bg-white">
+                            <option value="Bình thường">Bình thường</option>
+                            <option value="Khẩn cấp">Khẩn cấp (Xử lý ngay)</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-700 uppercase mb-1">Phân Công Kỹ Thuật Viên</label>
+                        <select id="jobTechSelect" class="w-full px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-sky-500 outline-none bg-white">
+                            <option value="">-- Chưa giao (Chờ phân công) --</option>
+                            <!-- Options added dynamically -->
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-700 uppercase mb-1">Vật Tư Đi Kèm (Nếu có)</label>
+                        <select id="jobSupplySelect" class="w-full px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-sky-500 outline-none bg-white">
+                            <option value="Không có vật tư phụ">Không mang vật tư</option>
+                            <option value="Gas R32 Chemours (1 Bình)">Gas R32 Chemours (1 Bình)</option>
+                            <option value="Ống Đồng 6/10 Toàn Phát (5m)">Ống Đồng 6/10 (5m)</option>
+                            <option value="Bộ Vệ Sinh Điều Hòa">Bộ Áo Vệ Sinh Điều Hòa</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-semibold text-slate-700 uppercase mb-1">Mô Tả Chi Tiết / Báo Lỗi Từ Khách</label>
+                    <textarea id="jobNotes" rows="2" placeholder="Ví dụ: Máy lạnh Daikin 1.5HP nháy đèn lỗi F3, chảy nước dàn lạnh..." class="w-full px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-sky-500 outline-none"></textarea>
+                </div>
+
+                <div class="pt-3 border-t border-slate-200 flex justify-end gap-2">
+                    <button type="button" onclick="closeModal('createJobModal')" class="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold rounded-lg">Hủy Bỏ</button>
+                    <button type="submit" class="px-4 py-2 bg-sky-600 hover:bg-sky-700 text-white text-xs font-semibold rounded-lg shadow">Tạo Phiếu & Giao Việc</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal 2: Create Material Sales Order -->
+    <div id="createOrderModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center hidden p-4">
+        <div class="bg-white rounded-2xl max-w-xl w-full shadow-2xl overflow-hidden border border-slate-100">
+            <div class="p-5 bg-gradient-to-r from-slate-900 to-slate-800 text-white flex justify-between items-center">
+                <div class="flex items-center gap-2">
+                    <i class="fa-solid fa-receipt text-xl text-sky-400"></i>
+                    <h3 class="font-bold text-lg">Lập Đơn Bán Vật Tư Điện Lạnh</h3>
+                </div>
+                <button onclick="closeModal('createOrderModal')" class="text-slate-400 hover:text-white text-lg"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <form id="orderForm" onsubmit="handleCreateOrder(event)" class="p-5 space-y-4 max-h-[80vh] overflow-y-auto">
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-700 uppercase mb-1">Khách Mua / Đại Lý (*)</label>
+                        <input type="text" required id="orderCustName" placeholder="Tên khách hàng hoặc thợ mua" class="w-full px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-sky-500 outline-none">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-700 uppercase mb-1">Số Điện Thoại</label>
+                        <input type="text" id="orderCustPhone" placeholder="0912..." class="w-full px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-sky-500 outline-none">
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-semibold text-slate-700 uppercase mb-1">Chọn Vật Tư Lấy Từ Kho</label>
+                    <div class="flex gap-2">
+                        <select id="orderProductSelect" class="flex-1 px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-sky-500 outline-none bg-white">
+                            <!-- Injected JS -->
+                        </select>
+                        <input type="number" id="orderQty" value="1" min="1" class="w-20 px-3 py-2 border rounded-lg text-sm text-center focus:ring-2 focus:ring-sky-500 outline-none">
+                        <button type="button" onclick="addItemToOrderCart()" class="bg-sky-600 text-white px-3 py-2 rounded-lg text-xs font-semibold hover:bg-sky-700">+ Thêm</button>
+                    </div>
+                </div>
+
+                <!-- Selected items preview table -->
+                <div class="border rounded-lg overflow-hidden">
+                    <table class="w-full text-left text-xs">
+                        <thead class="bg-slate-100 text-slate-600 font-semibold border-b">
+                            <tr>
+                                <th class="p-2.5">Sản Phẩm</th>
+                                <th class="p-2.5 text-center">SL</th>
+                                <th class="p-2.5 text-right">Đơn Giá</th>
+                                <th class="p-2.5 text-right">Thành Tiền</th>
+                                <th class="p-2.5 text-center">Xóa</th>
                             </tr>
                         </thead>
-                        <tbody id="tech-table-body" class="divide-y divide-slate-200">
-                            <!-- Dữ liệu KTV sẽ được tự động đổ vào đây -->
+                        <tbody id="orderCartTable" class="divide-y divide-slate-100">
+                            <tr>
+                                <td colspan="5" class="p-4 text-center text-slate-400">Chưa có vật tư nào được chọn</td>
+                            </tr>
                         </tbody>
                     </table>
                 </div>
-            </div>
-        </div>
 
-        <!-- TAB 3: KHO VẬT TƯ -->
-        <div id="view-inventory" class="tab-content hidden">
-            <div class="bg-white p-6 rounded-xl shadow border border-slate-200">
-                <h2 class="text-xl font-bold text-slate-800 mb-4">Kho Vật Tư Điện Lạnh</h2>
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <div class="p-4 border border-slate-200 rounded-lg bg-slate-50">
-                        <h4 class="font-bold text-slate-700">Gas R32 Inverter (Bình 10kg)</h4>
-                        <p class="text-sm text-slate-500">Tồn kho: <strong class="text-emerald-600">12 bình</strong></p>
+                <!-- Discount & Payment Total -->
+                <div class="bg-slate-50 p-3 rounded-lg space-y-2 border border-slate-200 text-xs">
+                    <div class="flex justify-between items-center">
+                        <span class="text-slate-600">Tổng tiền hàng:</span>
+                        <span id="orderSubtotal" class="font-semibold text-slate-800">0 đ</span>
                     </div>
-                    <div class="p-4 border border-slate-200 rounded-lg bg-slate-50">
-                        <h4 class="font-bold text-slate-700">Ống Đồng LHCT 6/10</h4>
-                        <p class="text-sm text-slate-500">Tồn kho: <strong class="text-emerald-600">45 mét</strong></p>
+                    <div class="flex justify-between items-center">
+                        <span class="text-slate-600">Chiết khấu / Giảm giá:</span>
+                        <input type="number" id="orderDiscount" value="0" onchange="calculateOrderTotal()" class="w-24 px-2 py-1 border rounded text-right">
                     </div>
-                    <div class="p-4 border border-slate-200 rounded-lg bg-slate-50">
-                        <h4 class="font-bold text-slate-700">Lốc Máy Lạnh Panasonic 1.5HP</h4>
-                        <p class="text-sm text-slate-500">Tồn kho: <strong class="text-amber-600">3 cái (Sắp hết)</strong></p>
+                    <div class="flex justify-between items-center text-sm font-bold pt-2 border-t border-slate-200">
+                        <span class="text-slate-900">Tổng Thanh Toán:</span>
+                        <span id="orderFinalTotal" class="text-sky-600 text-base">0 đ</span>
                     </div>
                 </div>
-            </div>
-        </div>
 
-    </div>
-
-    <!-- MODAL 1: GIAO VIỆC MỚI -->
-    <div id="modal-task" class="fixed inset-0 bg-slate-900/60 hidden flex justify-center items-center z-50 p-4">
-        <div class="bg-white rounded-xl shadow-xl max-w-md w-full p-6">
-            <h3 class="text-lg font-bold text-slate-800 mb-4 border-b pb-2"><i class="fa-solid fa-paper-plane text-cyan-600"></i> Tạo & Giao Việc Mới</h3>
-            <form onsubmit="saveTask(event)" class="space-y-3">
-                <div>
-                    <label class="block text-sm font-medium text-slate-700 mb-1">Tên Khách Hàng</label>
-                    <input type="text" id="task-customer" required placeholder="Ví dụ: Anh Nam" class="w-full border rounded-lg p-2 text-sm focus:ring-2 focus:ring-cyan-500">
-                </div>
-                <div>
-                    <label class="block text-sm font-medium text-slate-700 mb-1">Số Điện Thoại & Địa Chỉ</label>
-                    <input type="text" id="task-address" required placeholder="SĐT - Địa chỉ nhà khách" class="w-full border rounded-lg p-2 text-sm focus:ring-2 focus:ring-cyan-500">
-                </div>
-                <div>
-                    <label class="block text-sm font-medium text-slate-700 mb-1">Mô Tả Sự Cố / Vật Tư Cần Mang</label>
-                    <textarea id="task-desc" required placeholder="Ví dụ: Máy lạnh hỏng lốc, bơm gas R32..." class="w-full border rounded-lg p-2 text-sm focus:ring-2 focus:ring-cyan-500" rows="2"></textarea>
-                </div>
-                <div>
-                    <label class="block text-sm font-medium text-slate-700 mb-1">Giao Cho Kỹ Thuật Viên</label>
-                    <select id="task-tech-select" class="w-full border rounded-lg p-2 text-sm focus:ring-2 focus:ring-cyan-500">
-                        <!-- Danh sách KTV sẽ tự động đưa vào đây -->
-                    </select>
-                </div>
-                <div class="flex justify-end space-x-3 pt-3 border-t">
-                    <button type="button" onclick="closeModal('modal-task')" class="px-4 py-2 border rounded-lg text-sm text-slate-600 hover:bg-slate-100">Hủy</button>
-                    <button type="submit" class="px-4 py-2 bg-cyan-600 text-white font-semibold rounded-lg text-sm hover:bg-cyan-700">Tạo & Giao Việc</button>
+                <div class="pt-2 flex justify-end gap-2">
+                    <button type="button" onclick="closeModal('createOrderModal')" class="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold rounded-lg">Hủy Bỏ</button>
+                    <button type="submit" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold rounded-lg shadow">Xuất Kho & Thanh Toán</button>
                 </div>
             </form>
         </div>
     </div>
 
-    <!-- MODAL 2: BẢNG NHẬP THÊM / CHỈNH SỬA KỸ THUẬT VIÊN -->
-    <div id="modal-tech" class="fixed inset-0 bg-slate-900/60 hidden flex justify-center items-center z-50 p-4">
-        <div class="bg-white rounded-xl shadow-xl max-w-md w-full p-6">
-            <h3 id="tech-modal-title" class="text-lg font-bold text-slate-800 mb-4 border-b pb-2"><i class="fa-solid fa-user-plus text-emerald-600"></i> Thêm Kỹ Thuật Viên Mới</h3>
-            <form onsubmit="saveTech(event)" class="space-y-3">
-                <input type="hidden" id="tech-id-edit">
-                <div>
-                    <label class="block text-sm font-medium text-slate-700 mb-1">Họ và Tên</label>
-                    <input type="text" id="tech-name" required placeholder="Ví dụ: Anh Minh (Thợ chính)" class="w-full border rounded-lg p-2 text-sm focus:ring-2 focus:ring-emerald-500">
+    <!-- Modal 3: Add New Inventory Product -->
+    <div id="addProductModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center hidden p-4">
+        <div class="bg-white rounded-2xl max-w-md w-full shadow-2xl overflow-hidden border border-slate-100">
+            <div class="p-5 bg-slate-800 text-white flex justify-between items-center">
+                <div class="flex items-center gap-2">
+                    <i class="fa-solid fa-box text-xl text-sky-400"></i>
+                    <h3 class="font-bold text-lg">Thêm Vật Tư / Linh Kiện Mới</h3>
                 </div>
+                <button onclick="closeModal('addProductModal')" class="text-slate-400 hover:text-white text-lg"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <form id="addProductForm" onsubmit="handleAddProduct(event)" class="p-5 space-y-3">
                 <div>
-                    <label class="block text-sm font-medium text-slate-700 mb-1">Số Điện Thoại</label>
-                    <input type="text" id="tech-phone" required placeholder="0901234567" class="w-full border rounded-lg p-2 text-sm focus:ring-2 focus:ring-emerald-500">
+                    <label class="block text-xs font-semibold text-slate-700 uppercase mb-1">Tên Vật Tư (*)</label>
+                    <input type="text" required id="newProdName" placeholder="Ví dụ: Gas R32 Chemours 3kg" class="w-full px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-sky-500 outline-none">
                 </div>
-                <div>
-                    <label class="block text-sm font-medium text-slate-700 mb-1">Khu Vực Phụ Trách</label>
-                    <input type="text" id="tech-area" placeholder="Ví dụ: Quận 1, Quận 3..." class="w-full border rounded-lg p-2 text-sm focus:ring-2 focus:ring-emerald-500">
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-700 uppercase mb-1">Danh Mục</label>
+                        <select id="newProdCat" class="w-full px-3 py-2 border rounded-lg text-sm bg-white">
+                            <option value="Gas Lạnh">Gas Lạnh</option>
+                            <option value="Ống Đồng">Ống Đồng & Bảo Ôn</option>
+                            <option value="Máy Nén (Compressor)">Máy Nén (Compressor)</option>
+                            <option value="Bo Mạch">Bo Mạch Điều Khuển</option>
+                            <option value="Tụ Điện & Phụ Kiện">Tụ Điện & Phụ Kiện</option>
+                            <option value="Dụng Cụ Vệ Sinh">Dụng Cụ Vệ Sinh</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-700 uppercase mb-1">Thương Hiệu</label>
+                        <input type="text" id="newProdBrand" placeholder="Daikin, Panasonic..." class="w-full px-3 py-2 border rounded-lg text-sm outline-none">
+                    </div>
                 </div>
-                <div class="flex justify-end space-x-3 pt-3 border-t">
-                    <button type="button" onclick="closeModal('modal-tech')" class="px-4 py-2 border rounded-lg text-sm text-slate-600 hover:bg-slate-100">Hủy</button>
-                    <button type="submit" class="px-4 py-2 bg-emerald-600 text-white font-semibold rounded-lg text-sm hover:bg-emerald-700">Lưu Thông Tin</button>
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-700 uppercase mb-1">Giá Bán (VNĐ)</label>
+                        <input type="number" required id="newProdPrice" placeholder="550000" class="w-full px-3 py-2 border rounded-lg text-sm outline-none">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-700 uppercase mb-1">Số Lượng Tồn Kho Initial</label>
+                        <input type="number" required id="newProdStock" placeholder="25" class="w-full px-3 py-2 border rounded-lg text-sm outline-none">
+                    </div>
+                </div>
+                <div class="pt-3 flex justify-end gap-2">
+                    <button type="button" onclick="closeModal('addProductModal')" class="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold rounded-lg">Hủy Bỏ</button>
+                    <button type="submit" class="px-4 py-2 bg-sky-600 hover:bg-sky-700 text-white text-xs font-semibold rounded-lg shadow">Lưu Vào Kho</button>
                 </div>
             </form>
         </div>
     </div>
 
-    <!-- SCRIPT XỬ LÝ LƯU VÀ HIỂN THỊ DỮ LIỆU -->
+    <!-- Modal 4: Add New Tech -->
+    <div id="addTechModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center hidden p-4">
+        <div class="bg-white rounded-2xl max-w-md w-full shadow-2xl overflow-hidden border border-slate-100">
+            <div class="p-5 bg-slate-800 text-white flex justify-between items-center">
+                <div class="flex items-center gap-2">
+                    <i class="fa-solid fa-user-plus text-xl text-sky-400"></i>
+                    <h3 class="font-bold text-lg">Thêm Kỹ Thuật Viên Mới</h3>
+                </div>
+                <button onclick="closeModal('addTechModal')" class="text-slate-400 hover:text-white text-lg"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <form id="addTechForm" onsubmit="handleAddTech(event)" class="p-5 space-y-3">
+                <div>
+                    <label class="block text-xs font-semibold text-slate-700 uppercase mb-1">Họ & Tên KTV (*)</label>
+                    <input type="text" required id="newTechName" placeholder="Nguyễn Văn A" class="w-full px-3 py-2 border rounded-lg text-sm outline-none">
+                </div>
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-700 uppercase mb-1">Số Điện Thoại (*)</label>
+                        <input type="text" required id="newTechPhone" placeholder="0987..." class="w-full px-3 py-2 border rounded-lg text-sm outline-none">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-700 uppercase mb-1">Khu Vực Phụ Trách</label>
+                        <input type="text" id="newTechZone" placeholder="Quận 1, Q.3, Bình Thạnh..." class="w-full px-3 py-2 border rounded-lg text-sm outline-none">
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-slate-700 uppercase mb-1">Chuyên Môn Chính</label>
+                    <input type="text" id="newTechSkills" placeholder="Chuyên Inverter Daikin, Thay Block, Bo mạch..." class="w-full px-3 py-2 border rounded-lg text-sm outline-none">
+                </div>
+                <div class="pt-3 flex justify-end gap-2">
+                    <button type="button" onclick="closeModal('addTechModal')" class="px-4 py-2 bg-slate-100 text-slate-700 text-xs font-semibold rounded-lg">Hủy</button>
+                    <button type="submit" class="px-4 py-2 bg-sky-600 hover:bg-sky-700 text-white text-xs font-semibold rounded-lg shadow">Thêm Nhân Sự</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal 5: Add Customer Modal -->
+    <div id="addCustomerModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center hidden p-4">
+        <div class="bg-white rounded-2xl max-w-md w-full shadow-2xl overflow-hidden border border-slate-100">
+            <div class="p-5 bg-sky-700 text-white flex justify-between items-center">
+                <div class="flex items-center gap-2">
+                    <i class="fa-solid fa-address-book text-xl text-sky-200"></i>
+                    <h3 class="font-bold text-lg">Thêm Hồ Sơ Khách Hàng</h3>
+                </div>
+                <button onclick="closeModal('addCustomerModal')" class="text-sky-200 hover:text-white text-lg"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <form id="addCustForm" onsubmit="handleAddCustomer(event)" class="p-5 space-y-3">
+                <div>
+                    <label class="block text-xs font-semibold text-slate-700 uppercase mb-1">Tên Khách Hàng (*)</label>
+                    <input type="text" required id="newCustName" placeholder="Anh Hoàng - Căn hộ Landmark 81" class="w-full px-3 py-2 border rounded-lg text-sm outline-none">
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-slate-700 uppercase mb-1">Số Điện Thoại (*)</label>
+                    <input type="text" required id="newCustPhone" placeholder="0909112233" class="w-full px-3 py-2 border rounded-lg text-sm outline-none">
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-slate-700 uppercase mb-1">Địa Chỉ</label>
+                    <input type="text" required id="newCustAddr" placeholder="Số 45 Lê Lợi, P. Bến Nghé, Q.1" class="w-full px-3 py-2 border rounded-lg text-sm outline-none">
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-slate-700 uppercase mb-1">Thiết Bị Điện Lạnh Đang Dùng</label>
+                    <input type="text" id="newCustEquip" placeholder="2x Daikin Inverter 1.5HP, 1x LG Side-by-side" class="w-full px-3 py-2 border rounded-lg text-sm outline-none">
+                </div>
+                <div class="pt-3 flex justify-end gap-2">
+                    <button type="button" onclick="closeModal('addCustomerModal')" class="px-4 py-2 bg-slate-100 text-slate-700 text-xs font-semibold rounded-lg">Hủy</button>
+                    <button type="submit" class="px-4 py-2 bg-sky-600 hover:bg-sky-700 text-white text-xs font-semibold rounded-lg shadow">Lưu Khách Hàng</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+
+    <!-- ==================== JAVASCRIPT LOGIC ==================== -->
     <script>
-        // DỮ LIỆU BAN ĐẦU - TỰ ĐỘNG LƯU TRÊN TRÌNH DUYỆT (LOCALSTORAGE)
-        let technicians = JSON.parse(localStorage.getItem('app_techs')) || [
-            { id: 1, name: "Anh Minh (Thợ chính)", phone: "0903123456", area: "Quận 1, Q.3", status: "Sẵn sàng" },
-            { id: 2, name: "Anh Tuấn (Lắp đặt)", phone: "0908888999", area: "Tân Bình, Bình Thạnh", status: "Sẵn sàng" }
+        // MOCK INITIAL DATA STORE
+        let products = [
+            { id: 'VT-01', name: 'Gas R32 Chemours Dupont (Thùng 3kg)', category: 'Gas Lạnh', brand: 'Chemours', price: 650000, stock: 28, image: 'https://images.unsplash.com/photo-1581092160607-ee22621dd758?w=300&auto=format&fit=crop&q=80' },
+            { id: 'VT-02', name: 'Gas R410A India (Bình 11.3kg)', category: 'Gas Lạnh', brand: 'Chemours', price: 1450000, stock: 6, image: 'https://images.unsplash.com/photo-1581092335397-9583fe92d232?w=300&auto=format&fit=crop&q=80' },
+            { id: 'VT-03', name: 'Ống Đồng Thái Lan Luvata 6/10 (Cuộn 15m)', category: 'Ống Đồng', brand: 'Luvata', price: 820000, stock: 15, image: 'https://images.unsplash.com/photo-1621905251189-08b45d6a269e?w=300&auto=format&fit=crop&q=80' },
+            { id: 'VT-04', name: 'Máy Nén / Compressor Daikin 1.5HP Inverter', category: 'Máy Nén (Compressor)', brand: 'Daikin', price: 2900000, stock: 4, image: 'https://images.unsplash.com/photo-1581092162384-8987c1d64718?w=300&auto=format&fit=crop&q=80' },
+            { id: 'VT-05', name: 'Bo Mạch Điều Khuển Đa Năng Universal S88', category: 'Bo Mạch', brand: 'Panasonic', price: 380000, stock: 45, image: 'https://images.unsplash.com/photo-1518770660439-4636190af475?w=300&auto=format&fit=crop&q=80' },
+            { id: 'VT-06', name: 'Tụ Khởi Động Máy Lạnh CBB65 35uF 450V', category: 'Tụ Điện & Phụ Kiện', brand: 'LG', price: 75000, stock: 8, image: 'https://images.unsplash.com/photo-1555680202-c86f0e12f086?w=300&auto=format&fit=crop&q=80' },
+            { id: 'VT-07', name: 'Áo Bạt Vệ Sinh Máy Lạnh Chuyên Dụng (Loại Dày)', category: 'Dụng Cụ Vệ Sinh', brand: 'Khác', price: 180000, stock: 32, image: 'https://images.unsplash.com/photo-1581578731548-c64695cc6952?w=300&auto=format&fit=crop&q=80' },
+            { id: 'VT-08', name: 'Bơm Áp Lực Vệ Sinh Máy Lạnh Kärcher 1200W', category: 'Dụng Cụ Vệ Sinh', brand: 'Khác', price: 1850000, stock: 5, image: 'https://images.unsplash.com/photo-1581092160607-ee22621dd758?w=300&auto=format&fit=crop&q=80' }
         ];
 
-        let tasks = JSON.parse(localStorage.getItem('app_tasks')) || [
-            { id: 101, customer: "Chị Thảo", address: "0901112223 - 123 Lê Văn Sỹ, P.13, Q.3", desc: "Vệ sinh máy lạnh & Bơm gas R32", tech: "Anh Minh (Thợ chính)", status: "pending" }
+        let technicians = [
+            { id: 'KTV-01', name: 'Nguyễn Văn Anh', phone: '0903111222', zone: 'Quận 1, Q.3, Bình Thạnh', status: 'busy', currentJob: 'Lắp đặt Daikin 2HP - Villa Thảo Điền', rating: 4.9, avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&auto=format&fit=crop&q=80' },
+            { id: 'KTV-02', name: 'Trần Minh Bình', phone: '0908333444', zone: 'Quận 7, Nhà Bè, Q.4', status: 'moving', currentJob: 'Đang qua Khách hàng Anh Hoàng', rating: 4.8, avatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=100&auto=format&fit=crop&q=80' },
+            { id: 'KTV-03', name: 'Lê Văn Cường', phone: '0912555666', zone: 'Tân Bình, Phú Nhuận', status: 'idle', currentJob: 'Đang rảnh - Chờ phân công', rating: 4.7, avatar: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=100&auto=format&fit=crop&q=80' },
+            { id: 'KTV-04', name: 'Phạm Đức Dũng', phone: '0977888999', zone: 'Thành phố Thủ Đức', status: 'busy', currentJob: 'Thay Lốc nén Toshiba tại Kha Vạn Cân', rating: 5.0, avatar: 'https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?w=100&auto=format&fit=crop&q=80' }
         ];
 
-        function saveData() {
-            localStorage.setItem('app_techs', JSON.stringify(technicians));
-            localStorage.setItem('app_tasks', JSON.stringify(tasks));
-            renderTechs();
-            renderTasks();
-        }
+        let jobs = [
+            { id: 'JOB-101', customer: 'Chị Mai', phone: '0938112233', address: '45 Nguyễn Thị Minh Khai, Q.1, TP.HCM', type: 'Sửa chữa sự cố', priority: 'Khẩn cấp', status: 'pending', techId: '', notes: 'Máy lạnh Panasonic chớp đèn báo lỗi hỏng cảm biến nhiệt' },
+            { id: 'JOB-102', customer: 'Anh Hoàng (Sunrise City)', phone: '0909887766', address: 'Tháp X1, Sunrise City, Quận 7', type: 'Nạp Gas & Kiểm tra', priority: 'Bình thường', status: 'moving', techId: 'KTV-02', notes: 'Máy chạy không lạnh, cần đo áp suất Gas R32' },
+            { id: 'JOB-103', customer: 'Biệt thự Thảo Điền', phone: '0918223344', address: '12 Nguyễn Văn Hưởng, Thủ Đức', type: 'Lắp đặt mới', priority: 'Bình thường', status: 'inprogress', techId: 'KTV-01', notes: 'Thi công 2 bộ Daikin Inverter FTKF35XVMV' },
+            { id: 'JOB-104', customer: 'Công ty Nam Việt', phone: '02838999000', address: '180 Điện Biên Phủ, Bình Thạnh', type: 'Vệ sinh & Bảo dưỡng', priority: 'Bình thường', status: 'testing', techId: 'KTV-04', notes: 'Vệ sinh định kỳ 5 bộ máy lạnh âm trần cassette' },
+            { id: 'JOB-105', customer: 'Chú Tấn', phone: '0903998811', address: '88 Lý Thường Kiệt, Q.10', type: 'Thay thế linh kiện', priority: 'Bình thường', status: 'done', techId: 'KTV-03', notes: 'Đã thay Tụ điện 35uF cho dàn nóng LG' }
+        ];
 
-        // CHUYỂN TAB NAVIGATION
-        function switchTab(tab) {
-            document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
-            document.querySelectorAll('header + div button').forEach(el => el.classList.remove('active-tab'));
-            
-            document.getElementById(`view-${tab}`).classList.remove('hidden');
-            document.getElementById(`tab-${tab}`).classList.add('active-tab');
-        }
+        let customers = [
+            { id: 'KH-01', name: 'Chị Mai', phone: '0938112233', address: '45 Nguyễn Thị Minh Khai, Q.1', equipment: '1x Panasonic 1.5HP Inverter', lastService: '20/10/2026' },
+            { id: 'KH-02', name: 'Anh Hoàng (Sunrise City)', phone: '0909887766', address: 'Tháp X1, Sunrise City, Q.7', equipment: '3x Daikin 1HP, 1x Tủ lạnh Hitachi', lastService: '18/10/2026' },
+            { id: 'KH-03', name: 'Công ty Nam Việt', phone: '02838999000', address: '180 Điện Biên Phủ, Bình Thạnh', equipment: '5x Máy lạnh Âm Trần LG 3.0HP', lastService: '15/09/2026' },
+            { id: 'KH-04', name: 'Nhà hàng Biển Bạc', phone: '0903123789', address: '12 Võ Văn Kiệt, Quận 1', equipment: 'Kho lạnh 10m3 + 4 Máy lạnh Multi', lastService: '01/08/2026' }
+        ];
 
-        // 1. HIỂN THỊ BẢNG DANH SÁCH KĨ THUẬT VIÊN (CÓ NÚT SỬA VÀ XÓA)
-        function renderTechs() {
-            const tbody = document.getElementById('tech-table-body');
-            const select = document.getElementById('task-tech-select');
-            tbody.innerHTML = '';
-            select.innerHTML = '';
+        let cartItems = [];
 
-            technicians.forEach((t) => {
-                tbody.innerHTML += `
-                    <tr class="hover:bg-slate-50 text-sm">
-                        <td class="p-3 font-semibold text-slate-800">${t.name}</td>
-                        <td class="p-3 text-slate-600">${t.phone}</td>
-                        <td class="p-3 text-slate-600">${t.area}</td>
-                        <td class="p-3"><span class="bg-emerald-100 text-emerald-700 text-xs px-2.5 py-1 rounded-full font-medium">${t.status}</span></td>
-                        <td class="p-3 text-center space-x-2">
-                            <button onclick="openEditTechModal(${t.id})" class="text-amber-600 hover:text-amber-800 font-medium bg-amber-50 px-2 py-1 rounded border border-amber-200">
-                                <i class="fa-solid fa-pen-to-square"></i> Sửa
-                            </button>
-                            <button onclick="deleteTech(${t.id})" class="text-rose-600 hover:text-rose-800 font-medium bg-rose-50 px-2 py-1 rounded border border-rose-200">
-                                <i class="fa-solid fa-trash-can"></i> Xóa
-                            </button>
-                        </td>
-                    </tr>
-                `;
+        // ON LOAD INITIALIZATION
+        window.onload = function() {
+            renderDashboardTables();
+            renderRevenueChart();
+            renderServicePieChart();
+            renderInventoryGrid();
+            renderKanbanBoard();
+            renderTechniciansGrid();
+            renderCustomersTable();
+            populateTechSelectOptions();
+            populateProductOrderSelect();
+        };
 
-                select.innerHTML += `<option value="${t.name}">${t.name} (${t.area})</option>`;
+        // NAVIGATION TAB SWITCHING
+        function switchTab(tabId) {
+            document.querySelectorAll('.tab-content').forEach(tab => tab.classList.add('hidden'));
+            document.querySelectorAll('.nav-btn').forEach(btn => {
+                btn.classList.remove('bg-sky-600/90', 'text-white', 'shadow-sm');
+                btn.classList.add('text-slate-400');
             });
-        }
 
-        // 2. MỞ BẢNG THÊM KTV MỚI
-        function openAddTechModal() {
-            document.getElementById('tech-modal-title').innerHTML = `<i class="fa-solid fa-user-plus text-emerald-600"></i> Thêm Kỹ Thuật Viên Mới`;
-            document.getElementById('tech-id-edit').value = '';
-            document.getElementById('tech-name').value = '';
-            document.getElementById('tech-phone').value = '';
-            document.getElementById('tech-area').value = '';
-            document.getElementById('modal-tech').classList.remove('hidden');
-        }
+            document.getElementById(`tab-${tabId}`).classList.remove('hidden');
+            const activeNav = document.getElementById(`nav-${tabId}`);
+            if (activeNav) {
+                activeNav.classList.add('bg-sky-600/90', 'text-white', 'shadow-sm');
+                activeNav.classList.remove('text-slate-400');
+            }
 
-        // 3. MỞ BẢNG SỬA THÔNG TIN KTV
-        function openEditTechModal(id) {
-            const tech = technicians.find(t => t.id === id);
-            if(tech) {
-                document.getElementById('tech-modal-title').innerHTML = `<i class="fa-solid fa-pen-to-square text-amber-600"></i> Chỉnh Sửa Kỹ Thuật Viên`;
-                document.getElementById('tech-id-edit').value = tech.id;
-                document.getElementById('tech-name').value = tech.name;
-                document.getElementById('tech-phone').value = tech.phone;
-                document.getElementById('tech-area').value = tech.area;
-                document.getElementById('modal-tech').classList.remove('hidden');
+            // Close sidebar on mobile after selecting
+            if (window.innerWidth < 768) {
+                document.getElementById('sidebar').classList.add('-translate-x-full');
             }
         }
 
-        // 4. LƯU KHI THÊM HOẶC SỬA KTV
-        function saveTech(e) {
-            e.preventDefault();
-            const editId = document.getElementById('tech-id-edit').value;
-            const name = document.getElementById('tech-name').value;
-            const phone = document.getElementById('tech-phone').value;
-            const area = document.getElementById('tech-area').value;
+        function toggleSidebar() {
+            const sidebar = document.getElementById('sidebar');
+            sidebar.classList.toggle('-translate-x-full');
+        }
 
-            if (editId) {
-                // Cập nhật thông tin kỹ thuật viên
-                const tech = technicians.find(t => t.id == editId);
-                if(tech) {
-                    tech.name = name;
-                    tech.phone = phone;
-                    tech.area = area;
-                }
+        // TOAST NOTIFICATION SYSTEM
+        function showToast(message, type = 'info') {
+            const container = document.getElementById('toastContainer');
+            const toast = document.createElement('div');
+            
+            const bgClass = type === 'success' ? 'bg-emerald-600 text-white' :
+                            type === 'error' ? 'bg-rose-600 text-white' :
+                            type === 'warning' ? 'bg-amber-500 text-white' : 'bg-slate-800 text-white';
+
+            const iconClass = type === 'success' ? 'fa-circle-check' :
+                             type === 'error' ? 'fa-circle-exclamation' :
+                             type === 'warning' ? 'fa-triangle-exclamation' : 'fa-info-circle';
+
+            toast.className = `flex items-center gap-2 px-4 py-3 rounded-xl shadow-lg text-sm font-medium transition-all transform translate-y-2 pointer-events-auto ${bgClass}`;
+            toast.innerHTML = `<i class="fa-solid ${iconClass}"></i><span>${message}</span>`;
+            
+            container.appendChild(toast);
+            setTimeout(() => {
+                toast.classList.add('opacity-0', 'translate-y-[-10px]');
+                setTimeout(() => toast.remove(), 300);
+            }, 3000);
+        }
+
+        // MODAL TOGGLES
+        function openModal(modalId) {
+            document.getElementById(modalId).classList.remove('hidden');
+        }
+
+        function closeModal(modalId) {
+            document.getElementById(modalId).classList.add('hidden');
+        }
+
+        // 1. DASHBOARD COMPONENT RENDERERS
+        function renderDashboardTables() {
+            // Urgent Jobs
+            const urgentContainer = document.getElementById('dashUrgentJobsList');
+            const urgentJobs = jobs.filter(j => j.status !== 'done');
+            
+            if (urgentJobs.length === 0) {
+                urgentContainer.innerHTML = `<div class="p-4 text-center text-xs text-slate-400">Không có công việc tồn tồn đọng.</div>`;
             } else {
-                // Thêm kỹ thuật viên mới
-                const newTech = {
-                    id: Date.now(),
-                    name: name,
-                    phone: phone,
-                    area: area,
-                    status: 'Sẵn sàng'
-                };
-                technicians.push(newTech);
+                urgentContainer.innerHTML = urgentJobs.slice(0, 4).map(job => `
+                    <div class="p-3.5 hover:bg-slate-50 flex items-center justify-between transition">
+                        <div class="space-y-0.5">
+                            <div class="flex items-center gap-2">
+                                <span class="text-xs font-bold text-slate-800">${job.customer}</span>
+                                ${job.priority === 'Khẩn cấp' ? '<span class="bg-rose-100 text-rose-700 text-[10px] font-bold px-1.5 py-0.5 rounded">Gấp</span>' : ''}
+                            </div>
+                            <p class="text-xs text-slate-500 truncate max-w-xs"><i class="fa-solid fa-location-dot text-slate-400 mr-1"></i>${job.address}</p>
+                            <p class="text-xs text-sky-600 font-medium">${job.type}</p>
+                        </div>
+                        <div class="text-right">
+                            <span class="text-xs px-2 py-1 rounded-md font-semibold ${getStatusBadgeClass(job.status)}">
+                                ${getStatusText(job.status)}
+                            </span>
+                        </div>
+                    </div>
+                `).join('');
             }
 
-            saveData();
-            closeModal('modal-tech');
-        }
-
-        // 5. XÓA KTV KHOẢI HỆ THỐNG
-        function deleteTech(id) {
-            if(confirm('Bạn có chắc chắn muốn xóa kỹ thuật viên này khỏi hệ thống?')) {
-                technicians = technicians.filter(t => t.id !== id);
-                saveData();
-            }
-        }
-
-        // HIỂN THỊ CÁC THẺ CÔNG VIỆC KANBAN
-        function renderTasks() {
-            const cols = { pending: [], transit: [], progress: [], done: [] };
+            // Low Stock Items
+            const lowStockContainer = document.getElementById('dashLowStockList');
+            const lowStockItems = products.filter(p => p.stock <= 10);
             
-            tasks.forEach(task => {
-                if(cols[task.status]) cols[task.status].push(task);
+            lowStockContainer.innerHTML = lowStockItems.map(item => `
+                <div class="p-3.5 hover:bg-slate-50 flex items-center justify-between transition">
+                    <div class="flex items-center gap-3">
+                        <img src="${item.image}" class="w-10 h-10 rounded-lg object-cover border">
+                        <div>
+                            <h4 class="text-xs font-bold text-slate-800">${item.name}</h4>
+                            <p class="text-[11px] text-slate-500">Hãng: ${item.brand} | Mã: ${item.id}</p>
+                        </div>
+                    </div>
+                    <div class="text-right">
+                        <div class="text-xs font-bold text-rose-600">Còn ${item.stock} cái</div>
+                        <button onclick="switchTab('inventory')" class="text-[11px] text-sky-600 hover:underline">Nhập thêm</button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // CHART 1: REVENUE CHART (CHART.JS)
+        function renderRevenueChart() {
+            const ctx = document.getElementById('revenueChart').getContext('2d');
+            new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: ['Thứ 2', 'Thứ 3', 'Thứ 4', 'Thứ 5', 'Thứ 6', 'Thứ 7', 'Chủ Nhật'],
+                    datasets: [
+                        {
+                            label: 'Bán Vật Tư Lạnh',
+                            data: [12, 19, 15, 25, 22, 30, 28],
+                            borderColor: '#0284c7',
+                            backgroundColor: 'rgba(2, 132, 199, 0.1)',
+                            fill: true,
+                            tension: 0.3
+                        },
+                        {
+                            label: 'Dịch Vụ Kỹ Thuật',
+                            data: [8, 12, 10, 18, 15, 24, 20],
+                            borderColor: '#06b6d4',
+                            backgroundColor: 'rgba(6, 182, 212, 0.05)',
+                            fill: true,
+                            tension: 0.3
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { position: 'top', labels: { font: { family: 'Inter', size: 11 } } }
+                    },
+                    scales: {
+                        y: { ticks: { callback: value => value + ' tr' } }
+                    }
+                }
+            });
+        }
+
+        // CHART 2: SERVICE PIE CHART
+        function renderServicePieChart() {
+            const ctx = document.getElementById('servicePieChart').getContext('2d');
+            new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: ['Lắp đặt mới', 'Vệ sinh/Bảo dưỡng', 'Sửa sự cố', 'Thay Block/Bo'],
+                    datasets: [{
+                        data: [40, 30, 20, 10],
+                        backgroundColor: ['#0284c7', '#f59e0b', '#f43f5e', '#6366f1']
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false } }
+                }
+            });
+        }
+
+        // 2. INVENTORY LOGIC
+        function renderInventoryGrid() {
+            const grid = document.getElementById('productGrid');
+            const search = document.getElementById('inventorySearch').value.toLowerCase();
+            const category = document.getElementById('categoryFilter').value;
+            const brand = document.getElementById('brandFilter').value;
+            const stock = document.getElementById('stockFilter').value;
+
+            const filtered = products.filter(p => {
+                const matchSearch = p.name.toLowerCase().includes(search) || p.id.toLowerCase().includes(search);
+                const matchCat = category === 'all' || p.category === category;
+                const matchBrand = brand === 'all' || p.brand === brand;
+                const matchStock = stock === 'all' || (stock === 'low_stock' ? p.stock <= 10 : p.stock > 0);
+                return matchSearch && matchCat && matchBrand && matchStock;
             });
 
-            // Update Counts
-            document.getElementById('count-pending').innerText = cols.pending.length;
-            document.getElementById('count-transit').innerText = cols.transit.length;
-            document.getElementById('count-progress').innerText = cols.progress.length;
-            document.getElementById('count-done').innerText = cols.done.length;
+            document.getElementById('productCountBadge').innerText = products.length;
 
-            // Render Task Cards
-            ['pending', 'transit', 'progress', 'done'].forEach(status => {
-                const container = document.getElementById(`col-${status}`);
-                container.innerHTML = '';
-                
-                cols[status].forEach(t => {
-                    container.innerHTML += `
-                        <div class="bg-white p-3.5 rounded-lg shadow-sm border border-slate-200 text-sm space-y-2">
-                            <div class="flex justify-between items-start">
-                                <strong class="text-slate-800 text-base">${t.customer}</strong>
-                                <button onclick="deleteTask(${t.id})" class="text-slate-300 hover:text-rose-500 text-xs"><i class="fa-solid fa-xmark"></i></button>
+            if (filtered.length === 0) {
+                grid.innerHTML = `<div class="col-span-full p-8 text-center text-slate-400 bg-white rounded-xl border border-dashed">Không tìm thấy vật tư phù hợp.</div>`;
+                return;
+            }
+
+            grid.innerHTML = filtered.map(p => `
+                <div class="bg-white rounded-xl border border-slate-200 overflow-hidden shadow-sm hover:shadow-md transition flex flex-col justify-between">
+                    <div>
+                        <div class="relative h-40 bg-slate-100 overflow-hidden">
+                            <img src="${p.image}" class="w-full h-full object-cover">
+                            <span class="absolute top-2 left-2 bg-slate-900/80 text-white text-[10px] font-semibold px-2 py-0.5 rounded">
+                                ${p.category}
+                            </span>
+                            ${p.stock <= 10 ? '<span class="absolute top-2 right-2 bg-rose-500 text-white text-[10px] font-bold px-2 py-0.5 rounded">Sắp hết kho</span>' : ''}
+                        </div>
+                        <div class="p-4">
+                            <div class="text-[11px] font-semibold text-sky-600 uppercase tracking-wide">${p.brand}</div>
+                            <h3 class="font-bold text-slate-800 text-sm mt-0.5 line-clamp-2">${p.name}</h3>
+                            <div class="mt-3 flex items-baseline justify-between">
+                                <span class="text-xs text-slate-400">Mã: ${p.id}</span>
+                                <span class="text-base font-bold text-slate-900">${p.price.toLocaleString('vi-VN')} đ</span>
                             </div>
-                            <p class="text-slate-500 text-xs"><i class="fa-solid fa-location-dot text-slate-400 mr-1"></i>${t.address}</p>
-                            <p class="text-slate-700 bg-slate-50 p-2 rounded border text-xs">${t.desc}</p>
-                            <div class="flex items-center justify-between text-xs pt-1 border-t">
-                                <span class="font-medium text-cyan-700"><i class="fa-solid fa-user text-slate-400 mr-1"></i>${t.tech}</span>
-                                ${getActionButton(t.id, t.status)}
+                        </div>
+                    </div>
+                    <div class="p-3 bg-slate-50 border-t border-slate-100 flex items-center justify-between">
+                        <span class="text-xs font-medium ${p.stock <= 10 ? 'text-rose-600 font-bold' : 'text-slate-600'}">
+                            <i class="fa-solid fa-boxes-stacked mr-1"></i>Tồn: ${p.stock}
+                        </span>
+                        <button onclick="quickSelectOrderProduct('${p.id}')" class="text-xs bg-sky-50 text-sky-600 hover:bg-sky-600 hover:text-white px-2.5 py-1.5 rounded-lg font-semibold transition border border-sky-200">
+                            + Đặt Hàng
+                        </button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function filterInventory() {
+            renderInventoryGrid();
+        }
+
+        function handleAddProduct(e) {
+            e.preventDefault();
+            const name = document.getElementById('newProdName').value;
+            const category = document.getElementById('newProdCat').value;
+            const brand = document.getElementById('newProdBrand').value || 'Chưa rõ';
+            const price = parseInt(document.getElementById('newProdPrice').value) || 0;
+            const stock = parseInt(document.getElementById('newProdStock').value) || 0;
+
+            const newProd = {
+                id: `VT-0${products.length + 1}`,
+                name,
+                category,
+                brand,
+                price,
+                stock,
+                image: 'https://images.unsplash.com/photo-1581092160607-ee22621dd758?w=300&auto=format&fit=crop&q=80'
+            };
+
+            products.unshift(newProd);
+            renderInventoryGrid();
+            populateProductOrderSelect();
+            closeModal('addProductModal');
+            showToast('Thêm vật tư mới vào kho thành công!', 'success');
+            document.getElementById('addProductForm').reset();
+        }
+
+        // 3. SALES ORDER CREATION LOGIC
+        function populateProductOrderSelect() {
+            const select = document.getElementById('orderProductSelect');
+            select.innerHTML = products.map(p => `
+                <option value="${p.id}">${p.name} - ${p.price.toLocaleString('vi-VN')}đ (Kho: ${p.stock})</option>
+            `).join('');
+        }
+
+        function quickSelectOrderProduct(prodId) {
+            openModal('createOrderModal');
+            document.getElementById('orderProductSelect').value = prodId;
+        }
+
+        function addItemToOrderCart() {
+            const prodId = document.getElementById('orderProductSelect').value;
+            const qty = parseInt(document.getElementById('orderQty').value) || 1;
+            const prod = products.find(p => p.id === prodId);
+
+            if (!prod) return;
+            if (qty > prod.stock) {
+                showToast(`Kho chỉ còn ${prod.stock} sản phẩm!`, 'warning');
+                return;
+            }
+
+            const existing = cartItems.find(item => item.id === prodId);
+            if (existing) {
+                existing.qty += qty;
+            } else {
+                cartItems.push({ ...prod, qty });
+            }
+
+            renderOrderCart();
+        }
+
+        function removeCartItem(index) {
+            cartItems.splice(index, 1);
+            renderOrderCart();
+        }
+
+        function renderOrderCart() {
+            const tbody = document.getElementById('orderCartTable');
+            if (cartItems.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="5" class="p-4 text-center text-slate-400">Chưa có vật tư nào được chọn</td></tr>`;
+                calculateOrderTotal();
+                return;
+            }
+
+            tbody.innerHTML = cartItems.map((item, idx) => `
+                <tr>
+                    <td class="p-2.5 font-medium text-slate-800">${item.name}</td>
+                    <td class="p-2.5 text-center">${item.qty}</td>
+                    <td class="p-2.5 text-right">${item.price.toLocaleString('vi-VN')} đ</td>
+                    <td class="p-2.5 text-right font-semibold">${(item.price * item.qty).toLocaleString('vi-VN')} đ</td>
+                    <td class="p-2.5 text-center">
+                        <button type="button" onclick="removeCartItem(${idx})" class="text-rose-500 hover:text-rose-700">
+                            <i class="fa-solid fa-trash-can"></i>
+                        </button>
+                    </td>
+                </tr>
+            `).join('');
+
+            calculateOrderTotal();
+        }
+
+        function calculateOrderTotal() {
+            const subtotal = cartItems.reduce((sum, i) => sum + (i.price * i.qty), 0);
+            const discount = parseInt(document.getElementById('orderDiscount').value) || 0;
+            const finalTotal = Math.max(0, subtotal - discount);
+
+            document.getElementById('orderSubtotal').innerText = subtotal.toLocaleString('vi-VN') + ' đ';
+            document.getElementById('orderFinalTotal').innerText = finalTotal.toLocaleString('vi-VN') + ' đ';
+        }
+
+        function handleCreateOrder(e) {
+            e.preventDefault();
+            if (cartItems.length === 0) {
+                showToast('Vui lòng chọn ít nhất 1 vật tư!', 'warning');
+                return;
+            }
+
+            // Deduct stock
+            cartItems.forEach(cartItem => {
+                const target = products.find(p => p.id === cartItem.id);
+                if (target) {
+                    target.stock -= cartItem.qty;
+                }
+            });
+
+            cartItems = [];
+            renderOrderCart();
+            renderInventoryGrid();
+            renderDashboardTables();
+            closeModal('createOrderModal');
+            showToast('Đã tạo đơn bán hàng & xuất kho thành công!', 'success');
+        }
+
+        // 4. FIELD SERVICE / DISPATCH KANBAN BOARD LOGIC
+        function renderKanbanBoard() {
+            const cols = ['pending', 'moving', 'inprogress', 'testing', 'done'];
+            
+            cols.forEach(col => {
+                const colElem = document.getElementById(`col-${col}`);
+                const colJobs = jobs.filter(j => j.status === col);
+                document.getElementById(`count-${col}`).innerText = colJobs.length;
+
+                if (colJobs.length === 0) {
+                    colElem.innerHTML = `<div class="p-4 border-2 border-dashed border-slate-300/60 rounded-xl text-center text-xs text-slate-400">Trống</div>`;
+                    return;
+                }
+
+                colElem.innerHTML = colJobs.map(job => {
+                    const tech = technicians.find(t => t.id === job.techId);
+                    return `
+                        <div draggable="true" ondragstart="drag(event, '${job.id}')" class="bg-white p-3.5 rounded-xl border border-slate-200 shadow-sm hover:shadow-md transition cursor-grab active:cursor-grabbing space-y-2">
+                            <div class="flex items-start justify-between">
+                                <span class="text-[10px] font-bold px-2 py-0.5 rounded bg-sky-100 text-sky-700">${job.id}</span>
+                                ${job.priority === 'Khẩn cấp' ? '<span class="text-[10px] font-bold bg-rose-500 text-white px-1.5 py-0.5 rounded animate-pulse">GẤP</span>' : ''}
+                            </div>
+                            
+                            <div>
+                                <h4 class="font-bold text-slate-800 text-xs">${job.customer} - ${job.phone}</h4>
+                                <p class="text-[11px] text-slate-500 line-clamp-2 mt-0.5"><i class="fa-solid fa-location-dot text-slate-400 mr-1"></i>${job.address}</p>
+                            </div>
+
+                            <div class="p-2 bg-slate-50 rounded-lg text-[11px] space-y-1">
+                                <div class="font-semibold text-slate-700">${job.type}</div>
+                                ${job.notes ? `<p class="text-slate-500 italic text-[10px]">"${job.notes}"</p>` : ''}
+                            </div>
+
+                            <!-- Tech Assignee Tag -->
+                            <div class="pt-1 flex items-center justify-between text-xs border-t border-slate-100">
+                                <div class="flex items-center gap-1.5">
+                                    ${tech ? `
+                                        <img src="${tech.avatar}" class="w-5 h-5 rounded-full object-cover">
+                                        <span class="text-[11px] font-medium text-slate-700 truncate max-w-[100px]">${tech.name}</span>
+                                    ` : `<span class="text-[11px] text-rose-500 font-semibold"><i class="fa-solid fa-user-slash mr-1"></i>Chưa phân công</span>`}
+                                </div>
+                                <div class="dropdown relative">
+                                    <button onclick="changeJobStatusPrompt('${job.id}')" class="text-slate-400 hover:text-slate-600 p-1">
+                                        <i class="fa-solid fa-ellipsis-vertical"></i>
+                                    </button>
+                                </div>
                             </div>
                         </div>
                     `;
-                });
+                }).join('');
             });
+
+            // Update pending badge in sidebar
+            const pendingCount = jobs.filter(j => j.status === 'pending').length;
+            document.getElementById('pendingJobBadge').innerText = pendingCount;
         }
 
-        function getActionButton(id, status) {
-            if(status === 'pending') return `<button onclick="moveTask(${id}, 'transit')" class="bg-blue-600 text-white px-2 py-1 rounded text-xs hover:bg-blue-700">Chuyển di chuyển &rarr;</button>`;
-            if(status === 'transit') return `<button onclick="moveTask(${id}, 'progress')" class="bg-indigo-600 text-white px-2 py-1 rounded text-xs hover:bg-indigo-700">Đang làm &rarr;</button>`;
-            if(status === 'progress') return `<button onclick="moveTask(${id}, 'done')" class="bg-emerald-600 text-white px-2 py-1 rounded text-xs hover:bg-emerald-700">Hoàn thành &#10003;</button>`;
-            return `<span class="text-emerald-600 font-bold"><i class="fa-solid fa-check"></i> Xong</span>`;
+        // Drag & Drop Kanban Handlers
+        function allowDrop(ev) {
+            ev.preventDefault();
         }
 
-        function moveTask(id, newStatus) {
-            const task = tasks.find(t => t.id === id);
-            if(task) { task.status = newStatus; saveData(); }
+        function drag(ev, jobId) {
+            ev.dataTransfer.setData("jobId", jobId);
         }
 
-        function deleteTask(id) {
-            tasks = tasks.filter(t => t.id !== id);
-            saveData();
+        function drop(ev, targetStatus) {
+            ev.preventDefault();
+            const jobId = ev.dataTransfer.getData("jobId");
+            const job = jobs.find(j => j.id === jobId);
+            if (job) {
+                job.status = targetStatus;
+                renderKanbanBoard();
+                renderDashboardTables();
+                showToast(`Đã chuyển phiếu ${jobId} sang trạng thái "${getStatusText(targetStatus)}"`, 'success');
+            }
         }
 
-        // MODAL HANDLERS
-        function openNewTaskModal() { document.getElementById('modal-task').classList.remove('hidden'); }
-        function closeModal(id) { document.getElementById(id).classList.add('hidden'); }
+        function changeJobStatusPrompt(jobId) {
+            const job = jobs.find(j => j.id === jobId);
+            if (!job) return;
+            const nextStatus = prompt("Nhập trạng thái mới (pending, moving, inprogress, testing, done):", job.status);
+            if (nextStatus && ['pending', 'moving', 'inprogress', 'testing', 'done'].includes(nextStatus)) {
+                job.status = nextStatus;
+                renderKanbanBoard();
+                renderDashboardTables();
+                showToast('Đã cập nhật trạng thái!', 'success');
+            }
+        }
 
-        function saveTask(e) {
+        function handleCreateJob(e) {
             e.preventDefault();
-            const newTask = {
-                id: Date.now(),
-                customer: document.getElementById('task-customer').value,
-                address: document.getElementById('task-address').value,
-                desc: document.getElementById('task-desc').value,
-                tech: document.getElementById('task-tech-select').value,
-                status: 'pending'
+            const cust = document.getElementById('jobCustomer').value;
+            const phone = document.getElementById('jobPhone').value;
+            const address = document.getElementById('jobAddress').value;
+            const type = document.getElementById('jobType').value;
+            const priority = document.getElementById('jobPriority').value;
+            const techId = document.getElementById('jobTechSelect').value;
+            const notes = document.getElementById('jobNotes').value;
+
+            const newJob = {
+                id: `JOB-${100 + jobs.length + 1}`,
+                customer: cust,
+                phone,
+                address,
+                type,
+                priority,
+                status: techId ? 'moving' : 'pending',
+                techId,
+                notes
             };
-            tasks.push(newTask);
-            saveData();
-            closeModal('modal-task');
-            e.target.reset();
+
+            jobs.unshift(newJob);
+
+            // Also auto-add to customers if unique
+            if (!customers.find(c => c.phone === phone)) {
+                customers.push({
+                    id: `KH-0${customers.length + 1}`,
+                    name: cust,
+                    phone,
+                    address,
+                    equipment: 'Thiết bị dịch vụ điện lạnh',
+                    lastService: 'Vừa khởi tạo'
+                });
+                renderCustomersTable();
+            }
+
+            renderKanbanBoard();
+            renderDashboardTables();
+            closeModal('createJobModal');
+            showToast('Tạo phiếu giao việc kỹ thuật thành công!', 'success');
+            document.getElementById('jobForm').reset();
         }
 
-        // KHỞI CHẠY LẦN ĐẦU
-        renderTechs();
-        renderTasks();
+        // 5. TECHNICIAN MANAGEMENT LOGIC
+        function populateTechSelectOptions() {
+            const select = document.getElementById('jobTechSelect');
+            select.innerHTML = `<option value="">-- Chưa giao (Chờ phân công) --</option>` + 
+                technicians.map(t => `<option value="${t.id}">${t.name} (${t.zone})</option>`).join('');
+        }
+
+        function renderTechniciansGrid() {
+            const grid = document.getElementById('techGrid');
+            grid.innerHTML = technicians.map(t => {
+                const activeJobs = jobs.filter(j => j.techId === t.id && j.status !== 'done').length;
+                return `
+                    <div class="bg-white rounded-xl border border-slate-200 p-5 shadow-sm space-y-4 hover:border-sky-300 transition">
+                        <div class="flex items-center gap-3">
+                            <img src="${t.avatar}" class="w-12 h-12 rounded-full object-cover border-2 border-sky-500">
+                            <div>
+                                <h3 class="font-bold text-slate-800 text-sm">${t.name}</h3>
+                                <p class="text-xs text-slate-500"><i class="fa-solid fa-phone text-slate-400 mr-1"></i>${t.phone}</p>
+                                <div class="flex items-center gap-1 text-amber-500 text-xs mt-0.5">
+                                    <i class="fa-solid fa-star"></i>
+                                    <span class="font-bold">${t.rating}</span>
+                                    <span class="text-slate-400 text-[10px]">(28 ca thành công)</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="p-3 bg-slate-50 rounded-lg text-xs space-y-1.5">
+                            <div class="flex justify-between">
+                                <span class="text-slate-500">Khu vực:</span>
+                                <span class="font-medium text-slate-800">${t.zone}</span>
+                            </div>
+                            <div class="flex justify-between">
+                                <span class="text-slate-500">Ca đang nhận:</span>
+                                <span class="font-bold text-sky-600">${activeJobs} ca</span>
+                            </div>
+                            <div class="flex justify-between items-center">
+                                <span class="text-slate-500">Trạng thái:</span>
+                                <span class="px-2 py-0.5 rounded-full text-[10px] font-bold ${getTechStatusBadge(t.status)}">
+                                    ${getTechStatusText(t.status)}
+                                </span>
+                            </div>
+                        </div>
+
+                        <div class="text-xs text-slate-600 truncate">
+                            <i class="fa-solid fa-location-crosshairs text-sky-500 mr-1"></i>
+                            <span>${t.currentJob}</span>
+                        </div>
+
+                        <div class="pt-2 border-t border-slate-100 flex gap-2">
+                            <button onclick="openModal('createJobModal'); document.getElementById('jobTechSelect').value='${t.id}'" class="flex-1 bg-sky-50 hover:bg-sky-600 hover:text-white text-sky-600 py-1.5 rounded-lg text-xs font-semibold transition border border-sky-200">
+                                Giao Ca Mới
+                            </button>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function handleAddTech(e) {
+            e.preventDefault();
+            const name = document.getElementById('newTechName').value;
+            const phone = document.getElementById('newTechPhone').value;
+            const zone = document.getElementById('newTechZone').value || 'Toàn TP';
+
+            const newT = {
+                id: `KTV-0${technicians.length + 1}`,
+                name,
+                phone,
+                zone,
+                status: 'idle',
+                currentJob: 'Sẵn sàng nhận việc',
+                rating: 5.0,
+                avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100&auto=format&fit=crop&q=80'
+            };
+
+            technicians.unshift(newT);
+            renderTechniciansGrid();
+            populateTechSelectOptions();
+            closeModal('addTechModal');
+            showToast('Thêm kỹ thuật viên thành công!', 'success');
+            document.getElementById('addTechForm').reset();
+        }
+
+        // 6. CUSTOMER MANAGEMENT LOGIC
+        function renderCustomersTable() {
+            const tbody = document.getElementById('customerTableBody');
+            const search = document.getElementById('custSearch') ? document.getElementById('custSearch').value.toLowerCase() : '';
+
+            const filtered = customers.filter(c => 
+                c.name.toLowerCase().includes(search) || 
+                c.phone.includes(search) || 
+                c.address.toLowerCase().includes(search)
+            );
+
+            document.getElementById('custCount').innerText = filtered.length;
+
+            tbody.innerHTML = filtered.map(c => `
+                <hover class="hover:bg-slate-50 transition">
+                    <td class="p-3.5 pl-5 font-bold text-slate-800">${c.name}</td>
+                    <td class="p-3.5 font-medium text-sky-600">${c.phone}</td>
+                    <td class="p-3.5 text-xs text-slate-500 max-w-xs truncate">${c.address}</td>
+                    <td class="p-3.5 text-xs font-semibold text-slate-700">${c.equipment}</td>
+                    <td class="p-3.5 text-xs text-slate-500">${c.lastService}</td>
+                    <td class="p-3.5 pr-5 text-right">
+                        <button onclick="openModal('createJobModal'); document.getElementById('jobCustomer').value='${c.name}'; document.getElementById('jobPhone').value='${c.phone}'; document.getElementById('jobAddress').value='${c.address}';" class="text-xs bg-slate-100 hover:bg-sky-600 hover:text-white px-2.5 py-1 rounded-lg transition">
+                            <i class="fa-solid fa-calendar-plus mr-1"></i>Đặt Lịch
+                        </button>
+                    </td>
+                </hover>
+            `).join('');
+        }
+
+        function filterCustomers() {
+            renderCustomersTable();
+        }
+
+        function handleAddCustomer(e) {
+            e.preventDefault();
+            const name = document.getElementById('newCustName').value;
+            const phone = document.getElementById('newCustPhone').value;
+            const address = document.getElementById('newCustAddr').value;
+            const equip = document.getElementById('newCustEquip').value || 'Chưa cập nhật';
+
+            customers.unshift({
+                id: `KH-0${customers.length + 1}`,
+                name,
+                phone,
+                address,
+                equipment: equip,
+                lastService: 'Mới đăng ký'
+            });
+
+            renderCustomersTable();
+            closeModal('addCustomerModal');
+            showToast('Đã lưu thông tin khách hàng mới!', 'success');
+            document.getElementById('addCustForm').reset();
+        }
+
+        // HELPERS
+        function getStatusBadgeClass(status) {
+            switch (status) {
+                case 'pending': return 'bg-slate-100 text-slate-700';
+                case 'moving': return 'bg-amber-100 text-amber-800';
+                case 'inprogress': return 'bg-sky-100 text-sky-800';
+                case 'testing': return 'bg-indigo-100 text-indigo-800';
+                case 'done': return 'bg-emerald-100 text-emerald-800';
+                default: return 'bg-slate-100 text-slate-700';
+            }
+        }
+
+        function getStatusText(status) {
+            switch (status) {
+                case 'pending': return 'Chờ phân công';
+                case 'moving': return 'Đang di chuyển';
+                case 'inprogress': return 'Đang thi công';
+                case 'testing': return 'Chờ nghiệm thu';
+                case 'done': return 'Hoàn thành';
+                default: return status;
+            }
+        }
+
+        function getTechStatusBadge(status) {
+            switch (status) {
+                case 'busy': return 'bg-rose-100 text-rose-700';
+                case 'moving': return 'bg-amber-100 text-amber-700';
+                case 'idle': return 'bg-emerald-100 text-emerald-700';
+                default: return 'bg-slate-100 text-slate-700';
+            }
+        }
+
+        function getTechStatusText(status) {
+            switch (status) {
+                case 'busy': return 'Đang bận thi công';
+                case 'moving': return 'Đang di chuyển';
+                case 'idle': return 'Rảnh (Sẵn sàng)';
+                default: return status;
+            }
+        }
+
+        function toggleNotificationMenu() {
+            showToast('Bạn có 3 thông báo mới từ KTV Trần Bình', 'info');
+        }
     </script>
 </body>
 </html>
