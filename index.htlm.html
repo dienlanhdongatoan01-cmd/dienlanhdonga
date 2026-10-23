@@ -1,255 +1,222 @@
 <!DOCTYPE html>
-<html lang="vi" class="h-full bg-slate-50">
+<html lang="vi">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>HVAC Pro - Quản Lý Vật Tư Điện Lạnh & Điều Hành Kỹ Thuật</title>
+    <title>Hệ Thống Quản Lý Vật Tư & Kỹ Thuật</title>
     <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- FontAwesome Icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <!-- Chart.js CDN -->
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <!-- Google Fonts Inter -->
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    
-    <script>
-        tailwind.config = {
-            theme: {
-                extend: {
-                    fontFamily: { sans: ['Inter', 'sans-serif'] },
-                    colors: {
-                        brand: { 50: '#f0f9ff', 100: '#e0f2fe', 500: '#0284c7', 600: '#0369a1', 700: '#075985', 800: '#0c4a6e', 900: '#0a3651' }
-                    }
-                }
-            }
-        }
-    </script>
     <style>
-        ::-webkit-scrollbar { width: 6px; height: 6px; }
-        ::-webkit-scrollbar-track { background: #f1f5f9; }
-        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
-        ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
-        .kanban-col { min-height: calc(100vh - 280px); }
+        .kanban-col { min-height: 500px; }
+        .active-tab { border-bottom: 3px solid #0284c7; color: #0284c7; font-weight: bold; }
     </style>
 </head>
-<body class="h-full flex overflow-hidden font-sans text-slate-800 bg-slate-100">
+<body class="bg-slate-100 font-sans text-slate-800">
 
-    <!-- Toast Notification Container -->
-    <div id="toastContainer" class="fixed top-5 right-5 z-50 flex flex-col gap-2 pointer-events-none"></div>
-
-    <!-- MAIN SIDEBAR -->
-    <aside id="sidebar" class="w-64 bg-slate-900 text-slate-300 flex flex-col flex-shrink-0 transition-all duration-300 z-30 absolute md:relative inset-y-0 left-0 -translate-x-full md:translate-x-0 shadow-2xl md:shadow-none">
-        <!-- Logo Header -->
-        <div class="p-5 border-b border-slate-800 flex items-center justify-between">
-            <div class="flex items-center gap-3">
-                <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-sky-500 to-cyan-400 flex items-center justify-center text-white font-bold text-xl shadow-lg shadow-sky-500/30">
-                    <i class="fa-solid fa-snowflake animate-pulse"></i>
-                </div>
-                <div>
-                    <h1 class="font-bold text-white text-lg leading-tight">HVAC <span class="text-sky-400">PRO</span></h1>
-                    <p class="text-xs text-slate-400">Điện Lạnh & Kỹ Thuật</p>
-                </div>
+    <!-- Header Navigation -->
+    <header class="bg-slate-900 text-white sticky top-0 z-50 shadow-md">
+        <div class="max-w-7xl mx-auto px-4 py-3 flex justify-between items-center">
+            <div class="flex items-center space-x-3">
+                <i class="fa-solid font-bold text-2xl text-cyan-400 fa-snowflake"></i>
+                <span class="text-xl font-bold tracking-wide">ĐIỆN LẠNH ĐÔNG Á</span>
             </div>
-            <button onclick="toggleSidebar()" class="md:hidden text-slate-400 hover:text-white">
-                <i class="fa-solid fa-xmark text-xl"></i>
-            </button>
-        </div>
-
-        <!-- Navigation Links -->
-        <nav class="flex-1 p-4 space-y-1.5 overflow-y-auto">
-            <div class="text-xs font-semibold text-slate-500 uppercase tracking-wider px-3 mb-2">Quản trị hệ thống</div>
-            
-            <button onclick="switchTab('dashboard')" id="nav-dashboard" class="nav-btn w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all text-white bg-sky-600/90 shadow-sm shadow-sky-600/50">
-                <i class="fa-solid fa-chart-pie w-5 text-center text-sky-200"></i>
-                <span>Tổng quan</span>
-            </button>
-
-            <button onclick="switchTab('inventory')" id="nav-inventory" class="nav-btn w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all text-slate-400 hover:bg-slate-800 hover:text-slate-200">
-                <i class="fa-solid fa-boxes-stacked w-5 text-center"></i>
-                <span>Vật tư & Bán hàng</span>
-            </button>
-
-            <button onclick="switchTab('dispatch')" id="nav-dispatch" class="nav-btn w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all text-slate-400 hover:bg-slate-800 hover:text-slate-200">
-                <i class="fa-solid fa-list-check w-5 text-center"></i>
-                <span>Điều hành Kỹ thuật</span>
-            </button>
-
-            <button onclick="switchTab('technicians')" id="nav-technicians" class="nav-btn w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all text-slate-400 hover:bg-slate-800 hover:text-slate-200">
-                <i class="fa-solid fa-user-gear w-5 text-center"></i>
-                <span>Đội ngũ Kỹ thuật viên</span>
-            </button>
-        </nav>
-
-        <!-- User Info Footer -->
-        <div class="p-4 border-t border-slate-800 bg-slate-950/50 flex items-center gap-3">
-            <div class="w-9 h-9 rounded-full bg-cyan-600 flex items-center justify-center text-white font-bold">QL</div>
-            <div class="flex-1 min-w-0">
-                <div class="text-sm font-semibold text-white truncate">Quản Lý Điện Lạnh</div>
-                <div class="text-xs text-sky-400 truncate">Hệ thống Đông Á</div>
+            <div class="flex items-center space-x-4">
+                <span class="bg-cyan-600 text-xs px-2.5 py-1 rounded-full text-white font-medium">Quản Lý & Điều Xe</span>
             </div>
         </div>
-    </aside>
+    </header>
 
-    <!-- MAIN CONTENT WRAPPER -->
-    <div class="flex-1 flex flex-col min-w-0 overflow-hidden">
+    <!-- Main Container -->
+    <div class="max-w-7xl mx-auto px-4 py-6">
         
-        <!-- HEADER TOPBAR -->
-        <header class="bg-white border-b border-slate-200 h-16 flex items-center justify-between px-4 sm:px-6 z-20 flex-shrink-0 shadow-sm">
-            <div class="flex items-center gap-3">
-                <button onclick="toggleSidebar()" class="md:hidden text-slate-600 hover:text-slate-900 p-2 rounded-lg hover:bg-slate-100">
-                    <i class="fa-solid fa-bars text-lg"></i>
+        <!-- Navigation Tabs -->
+        <div class="flex border-b border-slate-300 mb-6 bg-white rounded-t-lg shadow-sm px-4 overflow-x-auto">
+            <button onclick="switchTab('kanban')" id="tab-kanban" class="py-3 px-6 active-tab flex items-center gap-2 whitespace-nowrap">
+                <i class="fa-solid fa-list-check"></i> Điều Xe & Giao Việc
+            </button>
+            <button onclick="switchTab('techs')" id="tab-techs" class="py-3 px-6 text-slate-600 hover:text-cyan-600 flex items-center gap-2 whitespace-nowrap">
+                <i class="fa-solid fa-users-gear"></i> Quản Lý Kỹ Thuật Viên
+            </button>
+            <button onclick="switchTab('inventory')" id="tab-inventory" class="py-3 px-6 text-slate-600 hover:text-cyan-600 flex items-center gap-2 whitespace-nowrap">
+                <i class="fa-solid fa-boxes-stacked"></i> Kho Vật Tư
+            </button>
+        </div>
+
+        <!-- TAB 1: BẢNG GIAO VIỆC (KANBAN) -->
+        <div id="view-kanban" class="tab-content">
+            <div class="flex justify-between items-center mb-4">
+                <h2 class="text-xl font-bold text-slate-800"><i class="fa-solid fa-clipboard-list text-cyan-600 mr-2"></i> Bảng Công Việc Hiện Trường</h2>
+                <button onclick="openNewTaskModal()" class="bg-cyan-600 hover:bg-cyan-700 text-white font-semibold px-4 py-2 rounded-lg shadow flex items-center gap-2">
+                    <i class="fa-solid fa-plus"></i> + Tạo & Giao Việc Mới
                 </button>
-                <div class="font-bold text-slate-700">Hệ Thống Quản Lý Điện Lạnh Đông Á</div>
             </div>
 
-            <div class="flex items-center gap-3">
-                <button onclick="openModal('createJobModal')" class="flex items-center gap-2 bg-sky-600 hover:bg-sky-700 text-white text-xs font-semibold px-3.5 py-2 rounded-lg shadow-sm transition">
-                    <i class="fa-solid fa-plus"></i>
-                    <span>+ Tạo & Giao Việc Mới</span>
-                </button>
-            </div>
-        </header>
-
-        <!-- TAB CONTENT AREA -->
-        <main class="flex-1 overflow-y-auto p-4 sm:p-6 bg-slate-100">
-            
-            <!-- 1. DASHBOARD TAB -->
-            <div id="tab-dashboard" class="tab-content space-y-6">
-                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                    <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm">
-                        <p class="text-xs font-medium text-slate-500 uppercase">Doanh Thu Tháng</p>
-                        <h3 class="text-2xl font-bold text-slate-900 mt-1">184,500,000 đ</h3>
-                    </div>
-                    <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm">
-                        <p class="text-xs font-medium text-slate-500 uppercase">Đơn Hàng Vật Tư</p>
-                        <h3 class="text-2xl font-bold text-slate-900 mt-1">128 đơn</h3>
-                    </div>
-                    <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm">
-                        <p class="text-xs font-medium text-slate-500 uppercase">Lịch Hẹn Hôm Nay</p>
-                        <h3 class="text-2xl font-bold text-slate-900 mt-1">18 ca</h3>
-                    </div>
-                    <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm">
-                        <p class="text-xs font-medium text-slate-500 uppercase">Thợ Đang Online</p>
-                        <h3 class="text-2xl font-bold text-slate-900 mt-1">8 / 10 thợ</h3>
-                    </div>
+            <!-- Kanban Columns -->
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                <!-- Chờ tiếp nhận -->
+                <div class="bg-slate-200/70 p-4 rounded-xl border border-slate-300 kanban-col">
+                    <h3 class="font-bold text-slate-700 mb-3 flex items-center justify-between">
+                        <span><i class="fa-regular fa-clock text-amber-500 mr-1"></i> CHỜ TIẾP NHẬN</span>
+                        <span id="count-pending" class="bg-amber-500 text-white text-xs px-2 py-0.5 rounded-full">0</span>
+                    </h3>
+                    <div id="col-pending" class="space-y-3"></div>
                 </div>
 
-                <div class="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
-                    <h3 class="font-bold text-slate-800 mb-2">Biểu Đồ Thống Kê Hoạt Động</h3>
-                    <div class="h-64 relative">
-                        <canvas id="revenueChart"></canvas>
-                    </div>
+                <!-- Đang di chuyển -->
+                <div class="bg-slate-200/70 p-4 rounded-xl border border-slate-300 kanban-col">
+                    <h3 class="font-bold text-slate-700 mb-3 flex items-center justify-between">
+                        <span><i class="fa-solid fa-truck-fast text-blue-500 mr-1"></i> ĐANG DI CHUYỂN</span>
+                        <span id="count-transit" class="bg-blue-500 text-white text-xs px-2 py-0.5 rounded-full">0</span>
+                    </h3>
+                    <div id="col-transit" class="space-y-3"></div>
                 </div>
-            </div>
 
-            <!-- 2. INVENTORY TAB -->
-            <div id="tab-inventory" class="tab-content space-y-6 hidden">
-                <div class="flex justify-between items-center">
-                    <h2 class="text-xl font-bold text-slate-800">Kho Vật Tư Điện Lạnh</h2>
-                    <button onclick="openModal('addProductModal')" class="bg-sky-600 text-white text-xs px-3.5 py-2 rounded-lg font-semibold">+ Thêm Linh Kiện</button>
+                <!-- Đang sửa chữa -->
+                <div class="bg-slate-200/70 p-4 rounded-xl border border-slate-300 kanban-col">
+                    <h3 class="font-bold text-slate-700 mb-3 flex items-center justify-between">
+                        <span><i class="fa-solid fa-wrench text-indigo-500 mr-1"></i> ĐANG THỰC HIỆN</span>
+                        <span id="count-progress" class="bg-indigo-500 text-white text-xs px-2 py-0.5 rounded-full">0</span>
+                    </h3>
+                    <div id="col-progress" class="space-y-3"></div>
                 </div>
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-4" id="productGrid">
-                    <!-- Dữ liệu kho -->
+
+                <!-- Hoàn thành -->
+                <div class="bg-slate-200/70 p-4 rounded-xl border border-slate-300 kanban-col">
+                    <h3 class="font-bold text-slate-700 mb-3 flex items-center justify-between">
+                        <span><i class="fa-solid fa-circle-check text-emerald-500 mr-1"></i> HOÀN THÀNH</span>
+                        <span id="count-done" class="bg-emerald-500 text-white text-xs px-2 py-0.5 rounded-full">0</span>
+                    </h3>
+                    <div id="col-done" class="space-y-3"></div>
                 </div>
             </div>
+        </div>
 
-            <!-- 3. DISPATCH (KANBAN) TAB -->
-            <div id="tab-dispatch" class="tab-content space-y-6 hidden">
-                <div class="flex justify-between items-center">
-                    <h2 class="text-xl font-bold text-slate-800">Bảng Điều Xe & Giao Việc</h2>
-                    <button onclick="openModal('createJobModal')" class="bg-sky-600 text-white text-xs px-3.5 py-2 rounded-lg font-semibold">+ Giao Việc Mới</button>
+        <!-- TAB 2: QUẢN LÝ DANH SÁCH KĨ THUẬT VIÊN (THÊM - SỬA - XÓA) -->
+        <div id="view-techs" class="tab-content hidden">
+            <div class="bg-white p-6 rounded-xl shadow border border-slate-200">
+                <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
+                    <div>
+                        <h2 class="text-xl font-bold text-slate-800">Quản Lý Đội Ngũ Kỹ Thuật Viên</h2>
+                        <p class="text-sm text-slate-500">Thêm mới, sửa thông tin hoặc xóa kỹ thuật viên khỏi hệ thống</p>
+                    </div>
+                    <!-- NÚT THÊM KĨ THUẬT VIÊN -->
+                    <button onclick="openAddTechModal()" class="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold px-4 py-2 rounded-lg shadow flex items-center gap-2">
+                        <i class="fa-solid fa-user-plus"></i> + Thêm Kỹ Thuật Viên Mới
+                    </button>
                 </div>
-                <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
-                    <div class="bg-slate-200/70 p-3 rounded-xl kanban-col">
-                        <h3 class="font-bold text-slate-700 text-sm mb-3">CHỜ TIẾP NHẬN (<span id="count-pending">0</span>)</h3>
-                        <div id="col-pending" class="space-y-3"></div>
-                    </div>
-                    <div class="bg-slate-200/70 p-3 rounded-xl kanban-col">
-                        <h3 class="font-bold text-slate-700 text-sm mb-3">ĐANG DI CHUYỂN (<span id="count-moving">0</span>)</h3>
-                        <div id="col-moving" class="space-y-3"></div>
-                    </div>
-                    <div class="bg-slate-200/70 p-3 rounded-xl kanban-col">
-                        <h3 class="font-bold text-slate-700 text-sm mb-3">ĐANG SỬA CHỮA (<span id="count-inprogress">0</span>)</h3>
-                        <div id="col-inprogress" class="space-y-3"></div>
-                    </div>
-                    <div class="bg-slate-200/70 p-3 rounded-xl kanban-col">
-                        <h3 class="font-bold text-slate-700 text-sm mb-3">HOÀN THÀNH (<span id="count-done">0</span>)</h3>
-                        <div id="col-done" class="space-y-3"></div>
-                    </div>
+
+                <!-- Bảng danh sách kỹ thuật viên -->
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left border-collapse">
+                        <thead>
+                            <tr class="bg-slate-100 border-b border-slate-200 text-slate-600 text-sm">
+                                <th class="p-3">Họ và Tên</th>
+                                <th class="p-3">Số Điện Thoại</th>
+                                <th class="p-3">Khu Vực Phụ Trách</th>
+                                <th class="p-3">Trạng Thái</th>
+                                <th class="p-3 text-center">Thao Tác</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tech-table-body" class="divide-y divide-slate-200">
+                            <!-- Dữ liệu KTV sẽ được tự động đổ vào đây -->
+                        </tbody>
+                    </table>
                 </div>
             </div>
+        </div>
 
-            <!-- 4. TECHNICIANS TAB (CÓ ĐỦ THÊM, SỬA, XÓA) -->
-            <div id="tab-technicians" class="tab-content space-y-6 hidden">
-                <div class="bg-white p-6 rounded-xl shadow border border-slate-200">
-                    <div class="flex justify-between items-center mb-6">
-                        <div>
-                            <h2 class="text-xl font-bold text-slate-800">Quản Lý Đội Ngũ Kỹ Thuật Viên</h2>
-                            <p class="text-sm text-slate-500">Thêm mới, sửa thông tin hoặc xóa kỹ thuật viên khỏi hệ thống</p>
-                        </div>
-                        <button onclick="openAddTechModal()" class="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold px-4 py-2 rounded-lg shadow flex items-center gap-2 text-xs">
-                            <i class="fa-solid fa-user-plus"></i> + Thêm Kỹ Thuật Viên Mới
-                        </button>
+        <!-- TAB 3: KHO VẬT TƯ -->
+        <div id="view-inventory" class="tab-content hidden">
+            <div class="bg-white p-6 rounded-xl shadow border border-slate-200">
+                <h2 class="text-xl font-bold text-slate-800 mb-4">Kho Vật Tư Điện Lạnh</h2>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div class="p-4 border border-slate-200 rounded-lg bg-slate-50">
+                        <h4 class="font-bold text-slate-700">Gas R32 Inverter (Bình 10kg)</h4>
+                        <p class="text-sm text-slate-500">Tồn kho: <strong class="text-emerald-600">12 bình</strong></p>
                     </div>
-                    <div class="overflow-x-auto">
-                        <table class="w-full text-left border-collapse">
-                            <thead>
-                                <tr class="bg-slate-100 border-b border-slate-200 text-slate-600 text-sm">
-                                    <th class="p-3">Họ và Tên</th>
-                                    <th class="p-3">Số Điện Thoại</th>
-                                    <th class="p-3">Khu Vực Phụ Trách</th>
-                                    <th class="p-3">Trạng Thái</th>
-                                    <th class="p-3 text-center">Thao Tác</th>
-                                </tr>
-                            </thead>
-                            <tbody id="tech-table-body" class="divide-y divide-slate-200 text-sm">
-                                <!-- Đổ dữ liệu thợ tự động -->
-                            </tbody>
-                        </table>
+                    <div class="p-4 border border-slate-200 rounded-lg bg-slate-50">
+                        <h4 class="font-bold text-slate-700">Ống Đồng LHCT 6/10</h4>
+                        <p class="text-sm text-slate-500">Tồn kho: <strong class="text-emerald-600">45 mét</strong></p>
+                    </div>
+                    <div class="p-4 border border-slate-200 rounded-lg bg-slate-50">
+                        <h4 class="font-bold text-slate-700">Lốc Máy Lạnh Panasonic 1.5HP</h4>
+                        <p class="text-sm text-slate-500">Tồn kho: <strong class="text-amber-600">3 cái (Sắp hết)</strong></p>
                     </div>
                 </div>
             </div>
+        </div>
 
-        </main>
     </div>
 
-    <!-- MODAL THÊM / SỬA KỸ THUẬT VIÊN -->
-    <div id="modal-tech" class="fixed inset-0 bg-slate-900/60 hidden flex justify-center items-center z-50 p-4">
+    <!-- MODAL 1: GIAO VIỆC MỚI -->
+    <div id="modal-task" class="fixed inset-0 bg-slate-900/60 hidden flex justify-center items-center z-50 p-4">
         <div class="bg-white rounded-xl shadow-xl max-w-md w-full p-6">
-            <h3 id="tech-modal-title" class="text-lg font-bold text-slate-800 mb-4 border-b pb-2">Thêm Kỹ Thuật Viên Mới</h3>
-            <form onsubmit="saveTech(event)" class="space-y-3">
-                <input type="hidden" id="tech-id-edit">
+            <h3 class="text-lg font-bold text-slate-800 mb-4 border-b pb-2"><i class="fa-solid fa-paper-plane text-cyan-600"></i> Tạo & Giao Việc Mới</h3>
+            <form onsubmit="saveTask(event)" class="space-y-3">
                 <div>
-                    <label class="block text-sm font-medium text-slate-700 mb-1">Họ và Tên</label>
-                    <input type="text" id="tech-name" required placeholder="Ví dụ: Anh Minh (Thợ chính)" class="w-full border rounded-lg p-2 text-sm">
+                    <label class="block text-sm font-medium text-slate-700 mb-1">Tên Khách Hàng</label>
+                    <input type="text" id="task-customer" required placeholder="Ví dụ: Anh Nam" class="w-full border rounded-lg p-2 text-sm focus:ring-2 focus:ring-cyan-500">
                 </div>
                 <div>
-                    <label class="block text-sm font-medium text-slate-700 mb-1">Số Điện Thoại</label>
-                    <input type="text" id="tech-phone" required placeholder="0901234567" class="w-full border rounded-lg p-2 text-sm">
+                    <label class="block text-sm font-medium text-slate-700 mb-1">Số Điện Thoại & Địa Chỉ</label>
+                    <input type="text" id="task-address" required placeholder="SĐT - Địa chỉ nhà khách" class="w-full border rounded-lg p-2 text-sm focus:ring-2 focus:ring-cyan-500">
                 </div>
                 <div>
-                    <label class="block text-sm font-medium text-slate-700 mb-1">Khu Vực Phụ Trách</label>
-                    <input type="text" id="tech-area" placeholder="Ví dụ: Quận 1, Quận 3..." class="w-full border rounded-lg p-2 text-sm">
+                    <label class="block text-sm font-medium text-slate-700 mb-1">Mô Tả Sự Cố / Vật Tư Cần Mang</label>
+                    <textarea id="task-desc" required placeholder="Ví dụ: Máy lạnh hỏng lốc, bơm gas R32..." class="w-full border rounded-lg p-2 text-sm focus:ring-2 focus:ring-cyan-500" rows="2"></textarea>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-slate-700 mb-1">Giao Cho Kỹ Thuật Viên</label>
+                    <select id="task-tech-select" class="w-full border rounded-lg p-2 text-sm focus:ring-2 focus:ring-cyan-500">
+                        <!-- Danh sách KTV sẽ tự động đưa vào đây -->
+                    </select>
                 </div>
                 <div class="flex justify-end space-x-3 pt-3 border-t">
-                    <button type="button" onclick="closeModal('modal-tech')" class="px-4 py-2 border rounded-lg text-sm text-slate-600">Hủy</button>
-                    <button type="submit" class="px-4 py-2 bg-emerald-600 text-white font-semibold rounded-lg text-sm">Lưu Thông Tin</button>
+                    <button type="button" onclick="closeModal('modal-task')" class="px-4 py-2 border rounded-lg text-sm text-slate-600 hover:bg-slate-100">Hủy</button>
+                    <button type="submit" class="px-4 py-2 bg-cyan-600 text-white font-semibold rounded-lg text-sm hover:bg-cyan-700">Tạo & Giao Việc</button>
                 </div>
             </form>
         </div>
     </div>
 
-    <!-- SCRIPT XỬ LÝ HỆ THỐNG -->
+    <!-- MODAL 2: BẢNG NHẬP THÊM / CHỈNH SỬA KỸ THUẬT VIÊN -->
+    <div id="modal-tech" class="fixed inset-0 bg-slate-900/60 hidden flex justify-center items-center z-50 p-4">
+        <div class="bg-white rounded-xl shadow-xl max-w-md w-full p-6">
+            <h3 id="tech-modal-title" class="text-lg font-bold text-slate-800 mb-4 border-b pb-2"><i class="fa-solid fa-user-plus text-emerald-600"></i> Thêm Kỹ Thuật Viên Mới</h3>
+            <form onsubmit="saveTech(event)" class="space-y-3">
+                <input type="hidden" id="tech-id-edit">
+                <div>
+                    <label class="block text-sm font-medium text-slate-700 mb-1">Họ và Tên</label>
+                    <input type="text" id="tech-name" required placeholder="Ví dụ: Anh Minh (Thợ chính)" class="w-full border rounded-lg p-2 text-sm focus:ring-2 focus:ring-emerald-500">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-slate-700 mb-1">Số Điện Thoại</label>
+                    <input type="text" id="tech-phone" required placeholder="0901234567" class="w-full border rounded-lg p-2 text-sm focus:ring-2 focus:ring-emerald-500">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-slate-700 mb-1">Khu Vực Phụ Trách</label>
+                    <input type="text" id="tech-area" placeholder="Ví dụ: Quận 1, Quận 3..." class="w-full border rounded-lg p-2 text-sm focus:ring-2 focus:ring-emerald-500">
+                </div>
+                <div class="flex justify-end space-x-3 pt-3 border-t">
+                    <button type="button" onclick="closeModal('modal-tech')" class="px-4 py-2 border rounded-lg text-sm text-slate-600 hover:bg-slate-100">Hủy</button>
+                    <button type="submit" class="px-4 py-2 bg-emerald-600 text-white font-semibold rounded-lg text-sm hover:bg-emerald-700">Lưu Thông Tin</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- SCRIPT XỬ LÝ LƯU VÀ HIỂN THỊ DỮ LIỆU -->
     <script>
-        // Dữ liệu mẫu khởi tạo lưu trên LocalStorage
+        // DỮ LIỆU BAN ĐẦU - TỰ ĐỘNG LƯU TRÊN TRÌNH DUYỆT (LOCALSTORAGE)
         let technicians = JSON.parse(localStorage.getItem('app_techs')) || [
             { id: 1, name: "Anh Minh (Thợ chính)", phone: "0903123456", area: "Quận 1, Q.3", status: "Sẵn sàng" },
             { id: 2, name: "Anh Tuấn (Lắp đặt)", phone: "0908888999", area: "Tân Bình, Bình Thạnh", status: "Sẵn sàng" }
         ];
 
         let tasks = JSON.parse(localStorage.getItem('app_tasks')) || [
-            { id: 101, customer: "Chị Thảo", address: "123 Lê Văn Sỹ, Q.3", desc: "Vệ sinh máy lạnh & Bơm gas R32", tech: "Anh Minh (Thợ chính)", status: "pending" }
+            { id: 101, customer: "Chị Thảo", address: "0901112223 - 123 Lê Văn Sỹ, P.13, Q.3", desc: "Vệ sinh máy lạnh & Bơm gas R32", tech: "Anh Minh (Thợ chính)", status: "pending" }
         ];
 
         function saveData() {
@@ -259,46 +226,47 @@
             renderTasks();
         }
 
-        function toggleSidebar() {
-            document.getElementById('sidebar').classList.toggle('-translate-x-full');
-        }
-
-        function switchTab(tabId) {
+        // CHUYỂN TAB NAVIGATION
+        function switchTab(tab) {
             document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
-            document.querySelectorAll('.nav-btn').forEach(el => {
-                el.classList.remove('bg-sky-600/90', 'text-white', 'shadow-sm', 'shadow-sky-600/50');
-                el.classList.add('text-slate-400', 'hover:bg-slate-800', 'hover:text-slate-200');
-            });
-            document.getElementById(`tab-${tabId}`).classList.remove('hidden');
-            const activeBtn = document.getElementById(`nav-${tabId}`);
-            if(activeBtn) {
-                activeBtn.classList.add('bg-sky-600/90', 'text-white', 'shadow-sm', 'shadow-sky-600/50');
-                activeBtn.classList.remove('text-slate-400', 'hover:bg-slate-800', 'hover:text-slate-200');
-            }
+            document.querySelectorAll('header + div button').forEach(el => el.classList.remove('active-tab'));
+            
+            document.getElementById(`view-${tab}`).classList.remove('hidden');
+            document.getElementById(`tab-${tab}`).classList.add('active-tab');
         }
 
+        // 1. HIỂN THỊ BẢNG DANH SÁCH KĨ THUẬT VIÊN (CÓ NÚT SỬA VÀ XÓA)
         function renderTechs() {
             const tbody = document.getElementById('tech-table-body');
-            if(!tbody) return;
+            const select = document.getElementById('task-tech-select');
             tbody.innerHTML = '';
+            select.innerHTML = '';
+
             technicians.forEach((t) => {
                 tbody.innerHTML += `
-                    <tr class="hover:bg-slate-50">
+                    <tr class="hover:bg-slate-50 text-sm">
                         <td class="p-3 font-semibold text-slate-800">${t.name}</td>
                         <td class="p-3 text-slate-600">${t.phone}</td>
                         <td class="p-3 text-slate-600">${t.area}</td>
                         <td class="p-3"><span class="bg-emerald-100 text-emerald-700 text-xs px-2.5 py-1 rounded-full font-medium">${t.status}</span></td>
                         <td class="p-3 text-center space-x-2">
-                            <button onclick="openEditTechModal(${t.id})" class="text-amber-600 bg-amber-50 px-2.5 py-1 rounded border border-amber-200 font-medium text-xs">Sửa</button>
-                            <button onclick="deleteTech(${t.id})" class="text-rose-600 bg-rose-50 px-2.5 py-1 rounded border border-rose-200 font-medium text-xs">Xóa</button>
+                            <button onclick="openEditTechModal(${t.id})" class="text-amber-600 hover:text-amber-800 font-medium bg-amber-50 px-2 py-1 rounded border border-amber-200">
+                                <i class="fa-solid fa-pen-to-square"></i> Sửa
+                            </button>
+                            <button onclick="deleteTech(${t.id})" class="text-rose-600 hover:text-rose-800 font-medium bg-rose-50 px-2 py-1 rounded border border-rose-200">
+                                <i class="fa-solid fa-trash-can"></i> Xóa
+                            </button>
                         </td>
                     </tr>
                 `;
+
+                select.innerHTML += `<option value="${t.name}">${t.name} (${t.area})</option>`;
             });
         }
 
+        // 2. MỞ BẢNG THÊM KTV MỚI
         function openAddTechModal() {
-            document.getElementById('tech-modal-title').innerText = "Thêm Kỹ Thuật Viên Mới";
+            document.getElementById('tech-modal-title').innerHTML = `<i class="fa-solid fa-user-plus text-emerald-600"></i> Thêm Kỹ Thuật Viên Mới`;
             document.getElementById('tech-id-edit').value = '';
             document.getElementById('tech-name').value = '';
             document.getElementById('tech-phone').value = '';
@@ -306,10 +274,11 @@
             document.getElementById('modal-tech').classList.remove('hidden');
         }
 
+        // 3. MỞ BẢNG SỬA THÔNG TIN KTV
         function openEditTechModal(id) {
             const tech = technicians.find(t => t.id === id);
             if(tech) {
-                document.getElementById('tech-modal-title').innerText = "Chỉnh Sửa Kỹ Thuật Viên";
+                document.getElementById('tech-modal-title').innerHTML = `<i class="fa-solid fa-pen-to-square text-amber-600"></i> Chỉnh Sửa Kỹ Thuật Viên`;
                 document.getElementById('tech-id-edit').value = tech.id;
                 document.getElementById('tech-name').value = tech.name;
                 document.getElementById('tech-phone').value = tech.phone;
@@ -318,6 +287,7 @@
             }
         }
 
+        // 4. LƯU KHI THÊM HOẶC SỬA KTV
         function saveTech(e) {
             e.preventDefault();
             const editId = document.getElementById('tech-id-edit').value;
@@ -326,67 +296,115 @@
             const area = document.getElementById('tech-area').value;
 
             if (editId) {
+                // Cập nhật thông tin kỹ thuật viên
                 const tech = technicians.find(t => t.id == editId);
-                if(tech) { tech.name = name; tech.phone = phone; tech.area = area; }
+                if(tech) {
+                    tech.name = name;
+                    tech.phone = phone;
+                    tech.area = area;
+                }
             } else {
-                technicians.push({ id: Date.now(), name, phone, area, status: 'Sẵn sàng' });
+                // Thêm kỹ thuật viên mới
+                const newTech = {
+                    id: Date.now(),
+                    name: name,
+                    phone: phone,
+                    area: area,
+                    status: 'Sẵn sàng'
+                };
+                technicians.push(newTech);
             }
+
             saveData();
             closeModal('modal-tech');
         }
 
+        // 5. XÓA KTV KHOẢI HỆ THỐNG
         function deleteTech(id) {
-            if(confirm('Bạn có chắc chắn muốn xóa kỹ thuật viên này?')) {
+            if(confirm('Bạn có chắc chắn muốn xóa kỹ thuật viên này khỏi hệ thống?')) {
                 technicians = technicians.filter(t => t.id !== id);
                 saveData();
             }
         }
 
-        function closeModal(id) {
-            document.getElementById(id).classList.add('hidden');
-        }
-        function openModal(id) {
-            document.getElementById(id).classList.remove('hidden');
-        }
-
+        // HIỂN THỊ CÁC THẺ CÔNG VIỆC KANBAN
         function renderTasks() {
-            // Khởi tạo hiển thị cột đơn giản
-            const cols = { pending: [], moving: [], inprogress: [], done: [] };
-            tasks.forEach(t => { if(cols[t.status]) cols[t.status].push(t); });
+            const cols = { pending: [], transit: [], progress: [], done: [] };
             
-            ['pending', 'moving', 'inprogress', 'done'].forEach(status => {
+            tasks.forEach(task => {
+                if(cols[task.status]) cols[task.status].push(task);
+            });
+
+            // Update Counts
+            document.getElementById('count-pending').innerText = cols.pending.length;
+            document.getElementById('count-transit').innerText = cols.transit.length;
+            document.getElementById('count-progress').innerText = cols.progress.length;
+            document.getElementById('count-done').innerText = cols.done.length;
+
+            // Render Task Cards
+            ['pending', 'transit', 'progress', 'done'].forEach(status => {
                 const container = document.getElementById(`col-${status}`);
-                const countBadge = document.getElementById(`count-${status}`);
-                if(container && countBadge) {
-                    countBadge.innerText = cols[status].length;
-                    container.innerHTML = cols[status].map(t => `
-                        <div class="bg-white p-3 rounded-lg shadow-sm border text-xs space-y-1.5">
-                            <strong>${t.customer}</strong>
-                            <p class="text-slate-500">${t.address}</p>
-                            <p class="bg-slate-50 p-1 rounded">${t.desc}</p>
-                            <div class="text-cyan-700 font-medium">Thợ: ${t.tech}</div>
+                container.innerHTML = '';
+                
+                cols[status].forEach(t => {
+                    container.innerHTML += `
+                        <div class="bg-white p-3.5 rounded-lg shadow-sm border border-slate-200 text-sm space-y-2">
+                            <div class="flex justify-between items-start">
+                                <strong class="text-slate-800 text-base">${t.customer}</strong>
+                                <button onclick="deleteTask(${t.id})" class="text-slate-300 hover:text-rose-500 text-xs"><i class="fa-solid fa-xmark"></i></button>
+                            </div>
+                            <p class="text-slate-500 text-xs"><i class="fa-solid fa-location-dot text-slate-400 mr-1"></i>${t.address}</p>
+                            <p class="text-slate-700 bg-slate-50 p-2 rounded border text-xs">${t.desc}</p>
+                            <div class="flex items-center justify-between text-xs pt-1 border-t">
+                                <span class="font-medium text-cyan-700"><i class="fa-solid fa-user text-slate-400 mr-1"></i>${t.tech}</span>
+                                ${getActionButton(t.id, t.status)}
+                            </div>
                         </div>
-                    `).join('');
-                }
+                    `;
+                });
             });
         }
 
-        // Khởi chạy biểu đồ tổng quan
-        window.addEventListener('DOMContentLoaded', () => {
-            renderTechs();
-            renderTasks();
-            const ctx = document.getElementById('revenueChart');
-            if(ctx) {
-                new Chart(ctx, {
-                    type: 'bar',
-                    data: {
-                        labels: ['Thứ 2', 'Thứ 3', 'Thứ 4', 'Thứ 5', 'Thứ 6', 'Thứ 7', 'CN'],
-                        datasets: [{ label: 'Doanh thu (VNĐ)', data: [12, 19, 15, 22, 28, 35, 30], backgroundColor: '#0284c7' }]
-                    },
-                    options: { responsive: true, maintainAspectRatio: false }
-                });
-            }
-        });
+        function getActionButton(id, status) {
+            if(status === 'pending') return `<button onclick="moveTask(${id}, 'transit')" class="bg-blue-600 text-white px-2 py-1 rounded text-xs hover:bg-blue-700">Chuyển di chuyển &rarr;</button>`;
+            if(status === 'transit') return `<button onclick="moveTask(${id}, 'progress')" class="bg-indigo-600 text-white px-2 py-1 rounded text-xs hover:bg-indigo-700">Đang làm &rarr;</button>`;
+            if(status === 'progress') return `<button onclick="moveTask(${id}, 'done')" class="bg-emerald-600 text-white px-2 py-1 rounded text-xs hover:bg-emerald-700">Hoàn thành &#10003;</button>`;
+            return `<span class="text-emerald-600 font-bold"><i class="fa-solid fa-check"></i> Xong</span>`;
+        }
+
+        function moveTask(id, newStatus) {
+            const task = tasks.find(t => t.id === id);
+            if(task) { task.status = newStatus; saveData(); }
+        }
+
+        function deleteTask(id) {
+            tasks = tasks.filter(t => t.id !== id);
+            saveData();
+        }
+
+        // MODAL HANDLERS
+        function openNewTaskModal() { document.getElementById('modal-task').classList.remove('hidden'); }
+        function closeModal(id) { document.getElementById(id).classList.add('hidden'); }
+
+        function saveTask(e) {
+            e.preventDefault();
+            const newTask = {
+                id: Date.now(),
+                customer: document.getElementById('task-customer').value,
+                address: document.getElementById('task-address').value,
+                desc: document.getElementById('task-desc').value,
+                tech: document.getElementById('task-tech-select').value,
+                status: 'pending'
+            };
+            tasks.push(newTask);
+            saveData();
+            closeModal('modal-task');
+            e.target.reset();
+        }
+
+        // KHỞI CHẠY LẦN ĐẦU
+        renderTechs();
+        renderTasks();
     </script>
 </body>
 </html>
